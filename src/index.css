@@ -1,0 +1,35 @@
+/* src/index.css */
+
+/* 1. Global Reset: Removes default browser spacing and ensures consistent sizing */
+* {
+  box-sizing: border-box !important;
+  margin: 0;
+  padding: 0;
+}
+
+/* 2. Body Setup: Forces full width and prevents horizontal scrolling */
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff;
+  overflow-x: hidden; 
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 3. Root Setup: This is the critical part that kills Vite's 1280px max-width! */
+#root {
+  width: 100% !important;
+  max-width: none !important; 
+  min-height: 100vh;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Optional: Make links inherit fonts and remove default underline */
+a {
+  text-decoration: none;
+}

@@ -1,0 +1,21 @@
+/* src/index.css */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden; /* Prevents side-scrolling */
+  background-color: #ffffff;
+}
+
+#root {
+  width: 100%;
+  max-width: none; /* This kills Vite's default restriction! */
+  margin: 0;
+  padding: 0;
+}
