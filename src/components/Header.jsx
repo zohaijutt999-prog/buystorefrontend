@@ -40,7 +40,7 @@ const Header = () => {
         
         {/* Logo */}
         <Link to="/" className="logo-container" style={{ color: 'white', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '24px', fontWeight: 'bold' }}>
-          <ShoppingCart /> Weyfeir
+          <ShoppingCart /> Buystore
         </Link>
         
         {/* Search Bar */}
