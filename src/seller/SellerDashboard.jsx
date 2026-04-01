@@ -556,19 +556,16 @@ const SellerDashboard = () => {
       {/* RIGHT SIDE CONTENT AREA */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <header style={{ backgroundColor: '#ff5722', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, color: 'white' }}>
-           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '20px', fontWeight: 'bold' }}>
-             
-             {/* Custom Logo Integration */}
-             <div style={{backgroundColor: 'white', borderRadius: '5px', padding: '5px', display: 'flex', alignItems: 'center'}}>
-               <img 
-                  src={logoImage} 
-                  alt="Weyfeir Logo" 
-                  style={{ height: '24px', objectFit: 'contain' }} 
-               />
-             </div>
-             
-             Weyfeir Seller Central
-           </div>
+           
+           {/* Custom Logo Integration Linked to Home */}
+           <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+             <img 
+                src={logoImage} 
+                alt="Weyfeir Logo" 
+                style={{ height: '40px', objectFit: 'contain' }} 
+             />
+           </Link>
+
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', fontSize: '12px', fontWeight: 'bold' }}>
             <span style={{ cursor: 'pointer' }}>MY DASHBOARD</span>
             <div onClick={handleLogout} style={{ cursor: 'pointer' }}>LOGOUT</div>
