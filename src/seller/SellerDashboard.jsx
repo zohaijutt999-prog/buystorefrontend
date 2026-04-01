@@ -6,6 +6,7 @@ import {
   Truck, CheckSquare, XCircle, Image as ImageIcon, Send, 
   RefreshCw, ArrowLeft, Edit3, X
 } from 'lucide-react';
+import logoImage from '../assets/1.png'; // Imported the custom logo
 
 const SellerDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -556,7 +557,17 @@ const SellerDashboard = () => {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <header style={{ backgroundColor: '#ff5722', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10, color: 'white' }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '20px', fontWeight: 'bold' }}>
-             <div style={{backgroundColor: 'white', borderRadius: '50%', padding: '5px', display: 'flex'}}><ShoppingCart size={18} color="#ff5722" /></div> Weyfeir Seller Central
+             
+             {/* Custom Logo Integration */}
+             <div style={{backgroundColor: 'white', borderRadius: '5px', padding: '5px', display: 'flex', alignItems: 'center'}}>
+               <img 
+                  src={logoImage} 
+                  alt="Weyfeir Logo" 
+                  style={{ height: '24px', objectFit: 'contain' }} 
+               />
+             </div>
+             
+             Weyfeir Seller Central
            </div>
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', fontSize: '12px', fontWeight: 'bold' }}>
             <span style={{ cursor: 'pointer' }}>MY DASHBOARD</span>

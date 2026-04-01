@@ -5,6 +5,7 @@ import {
   User, LogOut, X, Search, Heart, Truck, Edit, Edit3, 
   MessageSquare, Send, RefreshCw, Image as ImageIcon 
 } from 'lucide-react';
+import logoImage from '../assets/1.png'; // Imported the custom logo
 
 const CustomerDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -370,9 +371,12 @@ const CustomerDashboard = () => {
 
       {/* HEADER */}
       <header style={{ backgroundColor: '#ff624d', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white', zIndex: 10 }}>
-        <Link to="/" style={{ color: 'white', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '24px', fontWeight: 'bold' }}>
-          <ShoppingCart size={28} /> Weyfeir
+        
+        {/* Custom Logo Integration */}
+        <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+          <img src={logoImage} alt="Weyfeir Logo" style={{ height: '40px', objectFit: 'contain' }} />
         </Link>
+        
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center', fontSize: '13px', fontWeight: 'bold' }}>
           <span style={{ cursor: 'pointer' }}>MY DASHBOARD</span>
           <div onClick={handleLogout} style={{ color: 'white', cursor: 'pointer' }}>LOGOUT</div>

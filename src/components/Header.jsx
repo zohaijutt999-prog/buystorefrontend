@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ShoppingCart } from 'lucide-react';
+import logoImage from '../assets/1.png'; // Imported the custom logo
 
 const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -24,7 +25,7 @@ const Header = () => {
       <style>
         {`
           .header-container { background-color: #ff624d; padding: 15px 50px; display: flex; justify-content: space-between; align-items: center; color: white; width: 100%; box-sizing: border-box; flex-wrap: wrap; gap: 15px; }
-          .logo-container { order: 1; }
+          .logo-container { order: 1; display: flex; align-items: center; }
           .search-container { display: flex; width: 50%; position: relative; order: 2; }
           .auth-buttons { display: flex; gap: 20px; order: 3; align-items: center; }
 
@@ -38,9 +39,16 @@ const Header = () => {
 
       <header className="header-container">
         
-        {/* Logo */}
-        <Link to="/" className="logo-container" style={{ color: 'white', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '24px', fontWeight: 'bold' }}>
-          <ShoppingCart /> Buystore
+        {/* Custom Logo */}
+        <Link to="/" className="logo-container" style={{ textDecoration: 'none' }}>
+          <img 
+            src={logoImage} 
+            alt="Weyfeir Logo" 
+            style={{ 
+              height: '40px', // Adjust this height as needed to fit your header
+              objectFit: 'contain' 
+            }} 
+          />
         </Link>
         
         {/* Search Bar */}
