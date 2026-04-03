@@ -44,12 +44,12 @@ const Footer = () => {
           <h3 style={{ fontSize: '20px', marginBottom: '20px' }}>Contact Us</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', color: '#ffe4e1', fontSize: '14px' }}>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-              <MapPin size={18} style={{ marginTop: '3px' }} />
-              <span>4 Copley Place, Floor 7, Boston, MA<br/>02116, USA</span>
+              <Phone size={18} style={{ marginTop: '3px' }} />
+              <span>Call us 24/7<br/><strong>+91 808 9140562</strong></span>
             </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <Phone size={18} />
-              <span>+1 2894696121</span>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <MapPin size={18} style={{ marginTop: '3px' }} />
+              <span>502 Market Street, San Francisco,<br/>CA 94105, USA</span>
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <Mail size={18} />

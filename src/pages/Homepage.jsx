@@ -84,8 +84,28 @@ const HomePage = () => {
     navigate('/dashboard');
   };
 
+  // --- ADD TO CART LOGIC ---
+  const handleAddToCart = (e, product) => {
+    e.stopPropagation(); // Prevents the card click event (Product Details) from firing
+    let cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const existingItem = cart.find(item => item.id === product.id);
+    
+    if (existingItem) {
+      existingItem.quantity += 1;
+    } else {
+      cart.push({ ...product, quantity: 1 });
+    }
+    
+    localStorage.setItem('cart', JSON.stringify(cart));
+    alert('✅ Product added to Cart!');
+  };
+
   const ProductCard = ({ product }) => (
-    <div style={{ minWidth: '220px', width: '220px', border: '1px solid #eaeaea', borderRadius: '8px', padding: '15px', backgroundColor: 'white', transition: 'box-shadow 0.3s', display: 'flex', flexDirection: 'column' }} className="product-card">
+    <div 
+      onClick={() => product.seller_id ? navigate(`/product/${product.id}`) : alert("Click on Live Database Products to see details.")} 
+      style={{ minWidth: '220px', width: '220px', border: '1px solid #eaeaea', borderRadius: '8px', padding: '15px', backgroundColor: 'white', transition: 'box-shadow 0.3s', display: 'flex', flexDirection: 'column', cursor: 'pointer' }} 
+      className="product-card"
+    >
       <div style={{ height: '180px', backgroundColor: '#f4f5f8', borderRadius: '6px', padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '15px' }}>
         <img src={product.image_url || product.img} alt={product.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
       </div>
@@ -96,10 +116,10 @@ const HomePage = () => {
       <p style={{ fontSize: '13px', color: '#444', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{product.title}</p>
       
       <div style={{ display: 'flex', gap: '5px', marginTop: '15px' }}>
-        <button style={{ flex: 1, backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>🛒 Cart</button>
+        <button onClick={(e) => handleAddToCart(e, product)} style={{ flex: 1, backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>🛒 Cart</button>
         {/* Only show chat if it's a live product from a seller */}
         {product.seller_id && (
-          <button onClick={() => handleStartChat(product)} style={{ flex: 1, backgroundColor: '#673ab7', color: 'white', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>💬 Chat</button>
+          <button onClick={(e) => { e.stopPropagation(); handleStartChat(product); }} style={{ flex: 1, backgroundColor: '#673ab7', color: 'white', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>💬 Chat</button>
         )}
       </div>
     </div>
