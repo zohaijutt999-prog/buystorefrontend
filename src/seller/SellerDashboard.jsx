@@ -4,28 +4,27 @@ import {
   Home, Box, ShoppingCart, ChevronDown, ChevronUp, Wallet, 
   MessageSquare, User, Settings, LogOut, Plus, Eye, 
   Truck, CheckSquare, XCircle, Image as ImageIcon, Send, 
-  RefreshCw, ArrowLeft, Edit3, X, Building, DollarSign, Edit, Menu
+  RefreshCw, ArrowLeft, Edit3, X, Building, DollarSign, Edit, Menu, Check, Search
 } from 'lucide-react';
 import logoImage from '../assets/1.png'; 
 
 const SellerDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // For mobile sidebar toggle
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Use environment variable for the API base URL, fallback to localhost for local testing
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
-  // Edit & Modal States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [globalProducts, setGlobalProducts] = useState([]); 
+  const [selectedGlobalProducts, setSelectedGlobalProducts] = useState([]); 
   
   const [selectedOrder, setSelectedOrder] = useState(null); 
   const [editingOrder, setEditingOrder] = useState(null); 
   const [newOrderStatus, setNewOrderStatus] = useState('');
 
-  // Chat States
   const [chatMessage, setChatMessage] = useState('');
   const [chatImageFile, setChatImageFile] = useState(null); 
   const [activeChatCustomer, setActiveChatCustomer] = useState(null);
@@ -34,15 +33,14 @@ const SellerDashboard = () => {
   const chatFileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Live Data States
   const [products, setProducts] = useState([]);
-  const [orders, setOrders] = useState([]); 
+  const [allOrders, setAllOrders] = useState([]); 
+  const [directOrders, setDirectOrders] = useState([]); 
   const [totalSales, setTotalSales] = useState(0); 
 
-  // Withdrawal States
   const [withdrawalHistory, setWithdrawalHistory] = useState([]);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('USDT');
+  const [paymentMethod, setPaymentMethod] = useState('USDT (TRC20)');
   const [walletAddress, setWalletAddress] = useState('');
   const [withdrawNote, setWithdrawNote] = useState('');
 
@@ -60,7 +58,6 @@ const SellerDashboard = () => {
   const [newProduct, setNewProduct] = useState({ title: '', category: '', price: '', stock_qty: '', description: '' });
   const [productImageFile, setProductImageFile] = useState(null);
 
-  // --- INITIAL LOAD ---
   useEffect(() => {
     const storedSeller = localStorage.getItem('sellerData');
     if (storedSeller) {
@@ -81,29 +78,25 @@ const SellerDashboard = () => {
       fetchContacts(parsedSeller.id);
       fetchOrders(parsedSeller.id); 
       fetchWithdrawals(parsedSeller.id);
+      fetchGlobalProducts(); 
     } else {
       window.location.href = '/seller-login';
     }
 
-    // Handle screen resize for sidebar
     const handleResize = () => {
-      if (window.innerWidth > 768) {
-        setIsSidebarOpen(false);
-      }
+      if (window.innerWidth > 768) setIsSidebarOpen(false);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Auto-scroll to bottom of chat
   useEffect(() => { 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); 
   }, [messages]);
 
-  // Helper for tab navigation on mobile
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
-    setIsSidebarOpen(false); // Close sidebar on mobile
+    setIsSidebarOpen(false); 
   };
 
   const handleOrdersToggle = () => {
@@ -111,7 +104,6 @@ const SellerDashboard = () => {
   };
 
 
-  // --- LIVE API CALLS (Products & Orders) ---
   const fetchProducts = async (sellerId) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/seller/products/${sellerId}`);
@@ -120,15 +112,33 @@ const SellerDashboard = () => {
     } catch (error) { console.error('Error fetching products:', error); }
   };
 
+  const fetchGlobalProducts = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/products/all`);
+      if (res.ok) setGlobalProducts(await res.json());
+    } catch (e) { console.error("Error fetching all live products", e); }
+  };
+
   const fetchOrders = async (sellerId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/orders/seller/${sellerId}`);
+      const response = await fetch(`${API_BASE_URL}/api/orders/seller-all/${sellerId}`);
       const data = await response.json();
       if (response.ok) {
-        setOrders(data.orders);
+        setAllOrders(data.orders); 
+        setDirectOrders(data.placed); 
         setTotalSales(data.totalSale);
       }
-    } catch (error) { console.error('Error fetching orders:', error); }
+    } catch (error) { 
+      console.error('Error fetching combined orders, falling back to basic route', error);
+      try {
+        const fallbackRes = await fetch(`${API_BASE_URL}/api/orders/seller/${sellerId}`);
+        const fallbackData = await fallbackRes.json();
+        if(fallbackRes.ok) {
+           setAllOrders(fallbackData.orders);
+           setTotalSales(fallbackData.totalSale);
+        }
+      } catch (e) { console.log(e); }
+    }
   };
 
   const handleUpdateOrderStatus = async () => {
@@ -148,12 +158,10 @@ const SellerDashboard = () => {
         alert('❌ Failed to update status.');
       }
     } catch (error) {
-      console.error('Error updating order:', error);
       alert('❌ Server error while updating order.');
     }
   };
 
-  // --- WITHDRAWAL LOGIC ---
   const fetchWithdrawals = async (sellerId) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/withdrawals/seller/${sellerId}`);
@@ -161,20 +169,13 @@ const SellerDashboard = () => {
     } catch (error) { console.error('Error fetching withdrawals:', error); }
   };
 
-  // Calculate dynamic balances
   const totalWithdrawnAndPending = withdrawalHistory.reduce((sum, w) => sum + parseFloat(w.amount), 0);
   const availableBalance = parseFloat(totalSales) - totalWithdrawnAndPending;
   const pendingAmount = withdrawalHistory.filter(w => w.status === 'Pending').reduce((sum, w) => sum + parseFloat(w.amount), 0);
 
   const handleWithdrawRequest = async () => {
-    if (!withdrawAmount || !walletAddress) {
-      alert("Please enter amount and wallet address/details.");
-      return;
-    }
-    if (parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > availableBalance) {
-      alert("Invalid amount or insufficient balance.");
-      return;
-    }
+    if (!withdrawAmount || !walletAddress) { alert("Please enter amount and wallet address/details."); return; }
+    if (parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > availableBalance) { alert("Invalid amount or insufficient balance."); return; }
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/withdrawals`, {
@@ -191,45 +192,53 @@ const SellerDashboard = () => {
 
       if (response.ok) {
         alert("✅ Withdrawal Request Submitted!");
-        setWithdrawAmount('');
-        setWalletAddress('');
-        setWithdrawNote('');
-        fetchWithdrawals(sellerData.id); // Refresh history
+        setWithdrawAmount(''); setWalletAddress(''); setWithdrawNote('');
+        fetchWithdrawals(sellerData.id); 
       } else {
         alert("❌ Failed to submit request.");
       }
+    } catch (error) { alert("Server Error."); }
+  };
+
+  const handleAddSelectedGlobalProducts = async () => {
+    if (selectedGlobalProducts.length === 0) {
+      alert("Please select at least one product.");
+      return;
+    }
+
+    try {
+      for (let prod of selectedGlobalProducts) {
+        await fetch(`${API_BASE_URL}/api/seller/products`, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             seller_id: sellerData.id,
+             title: prod.title,
+             category: prod.category,
+             price: prod.price,
+             stock_qty: prod.stock_qty || 10,
+             description: prod.description || 'Sourced from main catalog.',
+             profit: prod.profit || (prod.price * 0.2),
+             existing_image_url: prod.image_url // Updated to ensure correct field is parsed by backend
+           })
+        });
+      }
+      
+      alert('✅ Selected products added to your shop!');
+      setShowAddProductModal(false);
+      setSelectedGlobalProducts([]);
+      fetchProducts(sellerData.id);
+
     } catch (error) {
-      console.error(error);
-      alert("Server Error.");
+      alert('❌ Some products failed to add.');
     }
   };
 
-  const handleAddProduct = async () => {
-    try {
-      const calculatedProfit = parseFloat(newProduct.price) * 0.20;
-      const formData = new FormData();
-      formData.append('seller_id', sellerData.id);
-      formData.append('title', newProduct.title);
-      formData.append('category', newProduct.category);
-      formData.append('price', newProduct.price);
-      formData.append('stock_qty', newProduct.stock_qty);
-      formData.append('description', newProduct.description);
-      formData.append('profit', calculatedProfit);
-      if (productImageFile) formData.append('productImage', productImageFile);
-
-      const response = await fetch(`${API_BASE_URL}/api/seller/products`, { method: 'POST', body: formData });
-
-      if (response.ok) {
-        alert('✅ Product Added Successfully!');
-        setShowAddProductModal(false);
-        setNewProduct({ title: '', category: '', price: '', stock_qty: '', description: '' });
-        setProductImageFile(null);
-        fetchProducts(sellerData.id);
-      } else {
-        alert('❌ Failed to add product.');
-      }
-    } catch (error) {
-      alert('❌ Server error while adding product.');
+  const handleSelectAllGlobalProducts = () => {
+    if (selectedGlobalProducts.length === globalProducts.length) {
+      setSelectedGlobalProducts([]);
+    } else {
+      setSelectedGlobalProducts([...globalProducts]);
     }
   };
 
@@ -267,7 +276,6 @@ const SellerDashboard = () => {
     } catch (error) { alert('Error updating shop'); }
   };
 
-  // --- CHAT API CALLS ---
   const fetchContacts = async (sellerId) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/chat/seller/${sellerId}/contacts`);
@@ -312,7 +320,6 @@ const SellerDashboard = () => {
     window.location.href = '/'; 
   };
 
-  // Status Color Helper
   const getStatusColor = (status) => {
     switch(status) {
       case 'Pending': return '#ff9800';
@@ -324,63 +331,42 @@ const SellerDashboard = () => {
     }
   };
 
-
-  // --- VIEWS ---
   const renderDashboard = () => {
     const categoryCounts = products.reduce((acc, p) => {
       acc[p.category] = (acc[p.category] || 0) + 1;
       return acc;
     }, {});
 
-    const newOrdersCount = orders.filter(o => o.status === 'Pending').length;
-    const cancelledOrdersCount = orders.filter(o => o.status === 'Cancelled').length;
-    const onTheWayOrdersCount = orders.filter(o => o.status === 'Shipped').length;
-    const completedOrdersCount = orders.filter(o => o.status === 'Delivered').length;
+    const newOrdersCount = allOrders.filter(o => o.status === 'Pending').length;
+    const cancelledOrdersCount = allOrders.filter(o => o.status === 'Cancelled').length;
+    const onTheWayOrdersCount = allOrders.filter(o => o.status === 'Shipped').length;
+    const completedOrdersCount = allOrders.filter(o => o.status === 'Delivered').length;
 
     const CardBox = ({ children }) => (
-      <div className="card-box">
-        {children}
-      </div>
+      <div className="card-box">{children}</div>
     );
 
     return (
       <div style={{ paddingBottom: '40px' }}>
-        {/* TOP METRICS ROW */}
         <div className="dashboard-cards-container">
           <div onClick={() => handleTabChange('products')} className="dashboard-card bg-green">
-            <div>
-              <p className="card-subtitle">Total Products</p>
-              <h3 className="card-value">{products.length}</h3>
-            </div>
+            <div><p className="card-subtitle">Total Products</p><h3 className="card-value">{products.length}</h3></div>
             <div className="card-icon-bg"><Box size={24}/></div>
           </div>
-
           <div onClick={() => handleTabChange('all-orders')} className="dashboard-card bg-blue">
-            <div>
-              <p className="card-subtitle">Total Orders</p>
-              <h3 className="card-value">{orders.length}</h3>
-            </div>
+            <div><p className="card-subtitle">Total Orders</p><h3 className="card-value">{allOrders.length}</h3></div>
             <div className="card-icon-bg"><ShoppingCart size={24}/></div>
           </div>
-
           <div className="dashboard-card bg-orange">
-            <div>
-              <p className="card-subtitle">Guarantee Money</p>
-              <h3 className="card-value">$0.00</h3>
-            </div>
+            <div><p className="card-subtitle">Guarantee Money</p><h3 className="card-value">$0.00</h3></div>
             <div className="card-icon-bg"><DollarSign size={24}/></div>
           </div>
-
           <div onClick={() => handleTabChange('money')} className="dashboard-card bg-pink">
-            <div>
-              <p className="card-subtitle">Total Sales</p>
-              <h3 className="card-value">${parseFloat(totalSales).toFixed(2)}</h3>
-            </div>
+            <div><p className="card-subtitle">Total Sales</p><h3 className="card-value">${parseFloat(totalSales).toFixed(2)}</h3></div>
             <div className="card-icon-bg"><DollarSign size={24}/></div>
           </div>
         </div>
 
-        {/* MIDDLE SECTION */}
         <div className="middle-section-container">
           <CardBox>
             <h4 className="card-box-title">Sales Stat</h4>
@@ -393,19 +379,15 @@ const SellerDashboard = () => {
             </div>
             <p className="sales-chart-label">Last 5 Months</p>
           </CardBox>
-
           <CardBox>
             <h4 className="card-box-title">Category wise product count</h4>
             <ul className="category-list">
               {Object.keys(categoryCounts).length === 0 && <li style={{ color: '#888' }}>No products categorized yet.</li>}
               {Object.entries(categoryCounts).map(([cat, count]) => (
-                <li key={cat}>
-                  <span>{cat}</span> <span className="cat-count">{count}</span>
-                </li>
+                <li key={cat}><span>{cat}</span> <span className="cat-count">{count}</span></li>
               ))}
             </ul>
           </CardBox>
-
           <CardBox>
             <h4 style={{ margin: '0 0 5px 0', color: '#1e88e5', fontSize: '15px', cursor: 'pointer' }} onClick={() => handleTabChange('all-orders')}>Orders</h4>
             <p style={{ margin: '0 0 20px 0', fontSize: '11px', color: '#888' }}>This Month</p>
@@ -428,7 +410,6 @@ const SellerDashboard = () => {
               </div>
             </div>
           </CardBox>
-
           <CardBox>
             <h4 className="card-box-title">Purchased Package</h4>
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -444,20 +425,16 @@ const SellerDashboard = () => {
           </CardBox>
         </div>
 
-        {/* BOTTOM SECTION */}
         <div className="middle-section-container" style={{marginBottom: '40px'}}>
           <CardBox>
             <h4 className="card-box-title">Sold Amount</h4>
-            
             <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#888' }}>Your Sold Amount (Current day)</p>
             <h2 style={{ margin: '0 0 10px 0', color: '#2196f3', fontSize: '32px' }}>$0.00</h2>
             <p style={{ margin: '0 0 25px 0', fontSize: '11px', color: '#aaa' }}>Last day: $0.00</p>
-
             <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#888' }}>Your sold amount (current month)</p>
             <h2 style={{ margin: '0 0 10px 0', color: '#2196f3', fontSize: '32px' }}>${parseFloat(totalSales).toFixed(2)}</h2>
             <p style={{ margin: 0, fontSize: '11px', color: '#aaa' }}>Last Month: $0.00</p>
           </CardBox>
-
           <CardBox>
             <h4 className="card-box-title">Today Views</h4>
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', paddingBottom: '20px' }}>
@@ -467,7 +444,6 @@ const SellerDashboard = () => {
           </CardBox>
         </div>
 
-        {/* QUICK ACTIONS */}
         <h3 className="section-title">Quick Actions</h3>
         <div className="shortcuts-container">
           <div onClick={() => handleTabChange('products')} className="shortcut-card">
@@ -503,30 +479,97 @@ const SellerDashboard = () => {
 
       {showAddProductModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: '500px' }}>
+          <div className="modal-content" style={{ width: '90%', maxWidth: '1000px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, color: '#333' }}>Add New Product</h3>
+              <h3 style={{ margin: 0, color: '#333' }}>Select Products to Add</h3>
               <X size={20} style={{ cursor: 'pointer', color: '#888' }} onClick={() => setShowAddProductModal(false)} />
             </div>
-            <input type="text" placeholder="Product Title *" value={newProduct.title} onChange={e => setNewProduct({...newProduct, title: e.target.value})} className="modal-input"/>
-            <input type="text" placeholder="Category *" value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className="modal-input"/>
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-              <input type="number" placeholder="Price ($) *" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} style={{ flex: 1 }} className="modal-input no-margin"/>
-              <input type="number" placeholder="Stock Qty *" value={newProduct.stock_qty} onChange={e => setNewProduct({...newProduct, stock_qty: e.target.value})} style={{ flex: 1 }} className="modal-input no-margin"/>
+
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <p style={{ margin: '0 0 15px 0', color: '#1e88e5', fontSize: '14px' }}>You can add products to your inventory free of cost. No wallet balance will be deducted.</p>
+              
+              {/* Search Filters */}
+              <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 2, position: 'relative', minWidth: '200px' }}>
+                    <label style={{ position: 'absolute', top: '-8px', left: '10px', backgroundColor: 'white', padding: '0 5px', fontSize: '11px', color: '#888' }}>Search products</label>
+                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '4px', padding: '0 15px' }}>
+                      <Search size={16} color="#888" style={{marginRight: '5px'}}/>
+                      <input type="text" style={{ width: '100%', padding: '12px 0', border: 'none', outline: 'none' }}/>
+                    </div>
+                </div>
+                <div style={{ flex: 1, position: 'relative', minWidth: '100px' }}>
+                    <label style={{ position: 'absolute', top: '-8px', left: '10px', backgroundColor: 'white', padding: '0 5px', fontSize: '11px', color: '#888' }}>Min Price</label>
+                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '4px', padding: '0 15px' }}>
+                      <span style={{ color: '#555', marginRight: '5px' }}>$</span>
+                      <input type="number" style={{ width: '100%', padding: '12px 0', border: 'none', outline: 'none' }}/>
+                    </div>
+                </div>
+                <div style={{ flex: 1, position: 'relative', minWidth: '100px' }}>
+                    <label style={{ position: 'absolute', top: '-8px', left: '10px', backgroundColor: 'white', padding: '0 5px', fontSize: '11px', color: '#888' }}>Max Price</label>
+                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '4px', padding: '0 15px' }}>
+                      <span style={{ color: '#555', marginRight: '5px' }}>$</span>
+                      <input type="number" style={{ width: '100%', padding: '12px 0', border: 'none', outline: 'none' }}/>
+                    </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '16px', color: '#333' }}>
+                  <input 
+                    type="checkbox" 
+                    style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                    checked={selectedGlobalProducts.length === globalProducts.length && globalProducts.length > 0}
+                    onChange={handleSelectAllGlobalProducts}
+                  /> 
+                  Select All
+                </label>
+                <span style={{ border: '1px solid #ddd', padding: '5px 15px', borderRadius: '20px', fontSize: '13px', color: '#555' }}>
+                  {selectedGlobalProducts.length} products selected
+                </span>
+              </div>
+
+              <div style={{ maxHeight: '350px', overflowY: 'auto', border: '1px solid #eee', borderRadius: '8px', padding: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
+                  {globalProducts.length === 0 ? (
+                    <div style={{textAlign:'center', color:'#888', width:'100%', gridColumn: '1 / -1', padding: '40px 0'}}>
+                      <p style={{fontSize: '16px', color: '#555', margin: '0 0 10px 0'}}>No products match your search criteria</p>
+                      <p style={{fontSize: '13px', margin: 0}}>Try adjusting your search terms or price range</p>
+                    </div>
+                  ) : 
+                    globalProducts.map(p => {
+                      const isSelected = selectedGlobalProducts.find(item => item.id === p.id);
+                      return (
+                        <div key={p.id} onClick={() => {
+                          if(isSelected) setSelectedGlobalProducts(prev => prev.filter(item => item.id !== p.id));
+                          else setSelectedGlobalProducts(prev => [...prev, p]);
+                        }} style={{ border: `2px solid ${isSelected ? '#4caf50' : '#eee'}`, borderRadius: '8px', padding: '10px', cursor: 'pointer', position: 'relative' }}>
+                          {isSelected && <div style={{ position: 'absolute', top: '5px', right: '5px', backgroundColor: '#4caf50', color: 'white', borderRadius: '50%', padding: '2px' }}><Check size={14}/></div>}
+                          <img src={p.image_url} alt={p.title} style={{ width: '100%', height: '100px', objectFit: 'contain', marginBottom: '10px' }} />
+                          <p style={{ fontSize: '12px', margin: '0 0 5px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
+                          <p style={{ fontSize: '14px', margin: 0, color: '#1e88e5', fontWeight: 'bold' }}>${p.price}</p>
+                        </div>
+                      )
+                    })
+                  }
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '20px', gap: '15px' }}>
+                <button onClick={() => setShowAddProductModal(false)} style={{ backgroundColor: 'transparent', color: '#1e88e5', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>CANCEL</button>
+                <button 
+                  onClick={handleAddSelectedGlobalProducts} 
+                  style={{ backgroundColor: selectedGlobalProducts.length > 0 ? '#1e88e5' : '#e0e0e0', color: selectedGlobalProducts.length > 0 ? 'white' : '#999', border: 'none', padding: '10px 25px', borderRadius: '4px', fontWeight: 'bold', cursor: selectedGlobalProducts.length > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  disabled={selectedGlobalProducts.length === 0}
+                >
+                  <Plus size={16}/> ADD
+                </button>
+              </div>
             </div>
-            <textarea placeholder="Product Description..." value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="modal-textarea"></textarea>
-            <div style={{ border: '1px dashed #ccc', padding: '20px', textAlign: 'center', borderRadius: '4px', marginBottom: '20px', backgroundColor: '#f9f9f9' }}>
-              <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>Upload Product Image</p>
-              <input type="file" accept="image/*" onChange={e => setProductImageFile(e.target.files[0])} style={{ fontSize: '12px' }} />
-            </div>
-            <button onClick={handleAddProduct} style={{ backgroundColor: '#4caf50', color: 'white', border: 'none', padding: '12px', width: '100%', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>SAVE PRODUCT</button>
           </div>
         </div>
       )}
 
       <div className="products-grid">
         {products.length === 0 ? (
-          <div style={{ width: '100%', textAlign: 'center', padding: '40px', color: '#888' }}><Box size={40} color="#ccc" style={{ margin: '0 auto 10px auto' }} /><p>No products added yet. Click the <b>+ ADD</b> button!</p></div>
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#888' }}><Box size={40} color="#ccc" style={{ margin: '0 auto 10px auto' }} /><p>No products added yet. Click the <b>+ ADD</b> button!</p></div>
         ) : (
           products.map(p => (
             <div key={p.id} className="seller-product-card">
@@ -553,13 +596,13 @@ const SellerDashboard = () => {
       {/* Sidebar: Contacts */}
       <div className={`chat-sidebar ${activeChatCustomer ? 'hidden-mobile' : ''}`}>
         <div className="chat-sidebar-header">
-           <MessageSquare size={18}/> Customers
+           <MessageSquare size={18}/> Chat Messages
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No customer inquiries yet.</div>}
+          {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No messages yet.</div>}
           {chatContacts.map(contact => (
             <div key={contact.id} onClick={() => { setActiveChatCustomer(contact); fetchMessages(sellerData.id, contact.id); }} className={`chat-contact ${activeChatCustomer?.id === contact.id ? 'active' : ''}`}>
-              👤 {contact.fullName}
+              <User size={16} /> {contact.fullName}
             </div>
           ))}
         </div>
@@ -569,22 +612,48 @@ const SellerDashboard = () => {
       <div className={`chat-main ${!activeChatCustomer ? 'hidden-mobile' : ''}`}>
         {activeChatCustomer ? (
           <>
-            <div className="chat-header">
+            <div className="chat-header-blue">
               <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                <button className="back-btn-mobile" onClick={() => setActiveChatCustomer(null)}><ArrowLeft size={18}/></button>
-                <span style={{ fontWeight: 'bold', fontSize: '16px', color: '#333' }}>{activeChatCustomer.fullName}</span>
+                <button className="back-btn-mobile" onClick={() => setActiveChatCustomer(null)}><ArrowLeft size={18} color="white"/></button>
+                <span style={{ fontWeight: 'bold', fontSize: '16px', color: 'white' }}>Seller Support Chat</span>
               </div>
-              <RefreshCw size={18} style={{ cursor: 'pointer', color: '#1e88e5' }} onClick={() => fetchMessages(sellerData.id, activeChatCustomer.id)}/>
+              <RefreshCw size={18} style={{ cursor: 'pointer', color: 'white' }} onClick={() => fetchMessages(sellerData.id, activeChatCustomer.id)}/>
             </div>
             
             <div className="chat-messages">
+              {/* System Greeting from screenshot */}
+              <div className="chat-message-row received" style={{marginTop: '10px', marginBottom: '20px'}}>
+                <div className="chat-bubble system-bubble">
+                   <p style={{margin: '0 0 10px 0'}}>Please note that your store is linked to your Gurentor account. Any positive or negative reviews received on your Weyfeir store will also be reflected on your Gurentor store.</p>
+                   <p style={{margin: 0}}>Thank you for being part of the Weyfeir community. We look forward to seeing your store grow and succeed</p>
+                </div>
+              </div>
+
               {messages.length === 0 ? <div style={{textAlign: 'center', color: '#888', marginTop: '20px'}}>Send a message!</div> : 
                 messages.map(msg => (
                   <div key={msg.id} className={`chat-message-row ${msg.sender === 'seller' ? 'sent' : 'received'}`}>
-                    <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
-                      {msg.message && <div>{msg.message}</div>}
-                      {msg.image_url && <img src={msg.image_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: '4px', marginTop: msg.message ? '10px' : '0' }} />}
+                    
+                    {/* User Icon for Customer (Received - Left Side) */}
+                    {msg.sender !== 'seller' && (
+                      <div className="chat-avatar-icon">
+                        <User size={16} color="#555" />
+                      </div>
+                    )}
+                    
+                    <div style={{display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'seller' ? 'flex-end' : 'flex-start', maxWidth: '80%'}}>
+                       {msg.sender !== 'seller' && <span style={{fontSize: '11px', color: '#888', marginBottom: '3px', marginLeft: '5px'}}>{activeChatCustomer.email}</span>}
+                       <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
+                         {msg.message && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
+                         {msg.image_url && <img src={msg.image_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: '4px', marginTop: msg.message ? '10px' : '0' }} />}
+                       </div>
                     </div>
+
+                    {/* User Icon for Seller (Sent - Right Side) */}
+                    {msg.sender === 'seller' && (
+                      <div className="chat-avatar-icon">
+                        <User size={16} color="#555" />
+                      </div>
+                    )}
                   </div>
                 ))
               }
@@ -597,8 +666,8 @@ const SellerDashboard = () => {
                 <ImageIcon size={24} />
               </button>
               {chatImageFile && <span className="file-name">{chatImageFile.name}</span>}
-              <input type="text" placeholder="Reply to customer..." value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="chat-input" />
-              <button onClick={handleSendMessage} className="send-btn"><Send size={18}/></button>
+              <input type="text" placeholder="Type a message..." value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="chat-input" />
+              <button onClick={handleSendMessage} className="send-btn" style={{backgroundColor: 'transparent', color: '#888'}}><Send size={24}/></button>
             </div>
           </>
         ) : (
@@ -612,7 +681,8 @@ const SellerDashboard = () => {
   );
 
   const renderOrdersTable = (title) => {
-    // Detailed Order View
+    const ordersToShow = title === 'Direct Orders' ? directOrders : allOrders;
+
     if (selectedOrder) {
       return (
         <div>
@@ -632,7 +702,9 @@ const SellerDashboard = () => {
                 <ArrowLeft size={18} color="#1e88e5" style={{cursor: 'pointer'}} onClick={() => setSelectedOrder(null)} />
               </div>
               <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#555' }}>Assignment:</p>
-              <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#333' }}>Direct Order</p>
+              <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#333' }}>
+                {selectedOrder.seller_id === sellerData.id ? 'Customer Order' : 'Direct Order (Purchased by You)'}
+              </p>
               <p style={{ margin: '0 0 5px 0', fontSize: '12px', color: '#555' }}>Current Status:</p>
               <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: getStatusColor(selectedOrder.status), fontWeight: 'bold' }}>{selectedOrder.status}</p>
               
@@ -643,9 +715,11 @@ const SellerDashboard = () => {
                 <p style={{ margin: '0 0 5px 0', fontSize: '13px', color: '#555' }}><strong>Address:</strong> {selectedOrder.shipping_address || 'N/A'}</p>
               </div>
 
-              <button onClick={() => { setEditingOrder(selectedOrder); setNewOrderStatus(selectedOrder.status); }} style={{ width: '100%', backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                <Edit size={18}/> UPDATE STATUS
-              </button>
+              {selectedOrder.seller_id === sellerData.id && (
+                <button onClick={() => { setEditingOrder(selectedOrder); setNewOrderStatus(selectedOrder.status); }} style={{ width: '100%', backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+                  <Edit size={18}/> UPDATE STATUS
+                </button>
+              )}
             </div>
 
             <div className="order-items-main">
@@ -695,14 +769,12 @@ const SellerDashboard = () => {
       );
     }
 
-    // Default Orders Table View
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '24px', color: '#333', margin: 0 }}>{title}</h2>
         </div>
 
-        {/* Modal for editing order status */}
         {editingOrder && (
           <div className="modal-overlay">
             <div className="modal-content" style={{width: '400px'}}>
@@ -726,8 +798,8 @@ const SellerDashboard = () => {
         )}
 
         <div className="table-container">
-          {orders.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>No orders received yet.</div>
+          {ordersToShow.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>No orders found.</div>
           ) : (
             <table className="responsive-table">
               <thead>
@@ -742,7 +814,7 @@ const SellerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o, i) => (
+                {ordersToShow.map((o, i) => (
                   <tr key={i}>
                     <td style={{ color: '#333' }}>{o.order_number}</td>
                     <td style={{ color: '#333' }}>{new Date(o.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}</td>
@@ -753,10 +825,16 @@ const SellerDashboard = () => {
                         {o.status === 'Pending' ? 'Unpicked' : o.status}
                       </span>
                     </td>
-                    <td><span className="status-badge" style={{ backgroundColor: '#1e88e5' }}>Direct</span></td>
+                    <td>
+                      <span className="status-badge" style={{ backgroundColor: '#1e88e5' }}>
+                        {o.seller_id === sellerData.id ? 'Customer' : 'Direct'}
+                      </span>
+                    </td>
                     <td style={{ color: '#1e88e5', textAlign: 'center' }}>
                       <Eye size={18} style={{ cursor: 'pointer', marginRight: '10px' }} onClick={() => setSelectedOrder(o)} title="View Details" />
-                      <Edit size={18} style={{ cursor: 'pointer' }} onClick={() => { setEditingOrder(o); setNewOrderStatus(o.status); }} title="Edit Status" />
+                      {o.seller_id === sellerData.id && (
+                         <Edit size={18} style={{ cursor: 'pointer' }} onClick={() => { setEditingOrder(o); setNewOrderStatus(o.status); }} title="Edit Status" />
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -772,7 +850,6 @@ const SellerDashboard = () => {
     <div style={{ maxWidth: '900px' }}>
       <h2 style={{ fontSize: '24px', color: '#333', marginBottom: '20px' }}>Money Withdrawal</h2>
       
-      {/* Top Cards */}
       <div className="dashboard-cards-container">
         <div className="dashboard-card bg-blue" style={{position: 'relative'}}>
           <div>
@@ -792,7 +869,6 @@ const SellerDashboard = () => {
         </div>
       </div>
 
-      {/* Withdrawal Form */}
       <div className="profile-container" style={{ marginBottom: '20px' }}>
         <h4 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '16px' }}>Request a Withdrawal</h4>
         <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#555' }}>Available Balance: <span style={{fontWeight: 'bold'}}>${availableBalance.toFixed(2)}</span></p>
@@ -833,7 +909,6 @@ const SellerDashboard = () => {
         </button>
       </div>
 
-      {/* History Table */}
       <div className="table-container">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h4 style={{ margin: 0, color: '#333', fontSize: '16px' }}>Withdrawal History</h4>
@@ -991,7 +1066,7 @@ const SellerDashboard = () => {
           /* Header */
           .header { background-color: #ff5722; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; color: white; z-index: 20; position: relative; }
           .logo-container { display: flex; alignItems: center; cursor: pointer; max-width: 150px; }
-          .logo-container img { width: 100%; height: auto; max-height: 60px; object-fit: contain; } /* Increased height to 60px */
+          .logo-container img { width: 100%; height: auto; max-height: 60px; object-fit: contain; }
           .header-right { display: flex; gap: 20px; align-items: center; font-size: 12px; font-weight: bold; }
           .mobile-menu-btn { display: none; background: none; border: none; color: white; cursor: pointer; padding: 5px; }
 
@@ -1010,7 +1085,7 @@ const SellerDashboard = () => {
           .content-area { flex: 1; padding: 40px 50px; overflow-y: auto; background-color: #f8f9fb; }
           .section-title { font-size: 20px; color: #333; margin-bottom: 20px; border-bottom: 2px solid #ff5722; display: inline-block; padding-bottom: 5px; }
           
-          /* Dashboard Cards (New Color Scheme) */
+          /* Dashboard Cards */
           .dashboard-cards-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
           .dashboard-card { flex: 1; min-width: 200px; color: white; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s; }
           .dashboard-card:hover { transform: translateY(-3px); }
@@ -1022,7 +1097,7 @@ const SellerDashboard = () => {
           .card-value { margin: 0; font-size: 28px; }
           .card-icon-bg { background-color: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; }
 
-          /* Middle & Bottom Sections */
+          /* Middle Sections */
           .middle-section-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
           .card-box { background-color: white; border-radius: 8px; padding: 20px; border: 1px solid #eee; flex: 1; min-width: 250px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
           .card-box-title { color: #1e88e5; margin: 0 0 20px 0; font-size: 15px; }
@@ -1049,7 +1124,7 @@ const SellerDashboard = () => {
           
           /* Modals */
           .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; width: 100%; }
+          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
           .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
           .modal-input.no-margin { margin-bottom: 0; }
           .modal-textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; min-height: 80px; resize: vertical; }
@@ -1067,29 +1142,34 @@ const SellerDashboard = () => {
           .order-items-main { flex: 1; min-width: 300px; background-color: white; border: 1px solid #eee; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
           .table-wrapper { overflow-x: auto; }
 
-          /* Chat */
+          /* Enhanced Chat Styles */
           .chat-container { height: calc(100vh - 120px); display: flex; background-color: white; border-radius: 8px; border: 1px solid #eee; overflow: hidden; }
           .chat-sidebar { width: 250px; border-right: 1px solid #eee; background-color: #fafafa; display: flex; flex-direction: column; flex-shrink: 0; }
           .chat-sidebar-header { padding: 15px; background-color: #1e88e5; color: white; font-weight: bold; display: flex; align-items: center; gap: 10px; }
-          .chat-contact { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; }
-          .chat-contact.active { background-color: #e3f2fd; font-weight: bold; }
+          .chat-contact { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 10px; color: #555; }
+          .chat-contact.active { background-color: #e3f2fd; font-weight: bold; color: #1e88e5; }
           .chat-main { flex: 1; display: flex; flex-direction: column; background-color: #fff; min-width: 0; }
-          .chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+          .chat-header-blue { padding: 15px 20px; background-color: #1e88e5; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
           .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-color: #f8f9fa; }
-          .chat-message-row { display: flex; gap: 10px; }
-          .chat-message-row.sent { align-self: flex-end; }
-          .chat-message-row.received { align-self: flex-start; }
-          .chat-bubble { padding: 10px 15px; font-size: 13px; max-width: 80%; line-height: 1.4; word-wrap: break-word; }
+          
+          /* Updated Chat Bubble Styles */
+          .chat-message-row { display: flex; gap: 10px; align-items: flex-end; }
+          .chat-message-row.sent { justify-content: flex-end; }
+          .chat-message-row.received { justify-content: flex-start; }
+          .chat-bubble { padding: 12px 16px; font-size: 14px; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
           .sent-bubble { background-color: #1e88e5; color: white; border-radius: 15px 15px 0 15px; }
-          .received-bubble { background-color: white; color: #333; border-radius: 15px 15px 15px 0; border: 1px solid #ddd; }
+          .received-bubble { background-color: white; color: #333; border-radius: 15px 15px 15px 0; border: 1px solid #e0e0e0; }
+          .system-bubble { background-color: white; color: #555; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 13px; max-width: 90%; margin: 0 auto; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+          .chat-avatar-icon { width: 32px; height: 32px; background-color: #e0e0e0; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+          
           .chat-input-area { padding: 15px; background-color: white; border-top: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
           .upload-btn { background-color: transparent; border: none; cursor: pointer; color: #888; border-radius: 50%; padding: 5px; }
           .upload-btn.has-file { background-color: #e3f2fd; color: #1e88e5; }
           .file-name { font-size: 11px; color: #1e88e5; max-width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .chat-input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 14px; min-width: 100px; }
-          .send-btn { background-color: #1e88e5; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; }
+          .chat-input { flex: 1; padding: 15px 20px; border: 1px solid #ddd; border-radius: 25px; outline: none; font-size: 14px; min-width: 100px; background-color: #f9f9f9; }
+          .send-btn { border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; }
           .empty-chat-state { flex: 1; display: flex; justify-content: center; align-items: center; color: #888; flex-direction: column; gap: 10px; }
-          .back-btn-mobile { display: none; background: none; border: none; cursor: pointer; color: #333; padding: 0; }
+          .back-btn-mobile { display: none; background: none; border: none; cursor: pointer; padding: 0; }
 
           /* Profile */
           .profile-container { background-color: white; padding: 30px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
@@ -1104,44 +1184,32 @@ const SellerDashboard = () => {
           .save-profile-btn { background-color: #1e88e5; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; }
 
           /* --- MEDIA QUERIES FOR RESPONSIVENESS --- */
-          
-          /* Tablet (max-width: 992px) */
           @media (max-width: 992px) {
             .content-area { padding: 30px; }
             .order-sidebar { width: 100%; }
           }
 
-          /* Mobile (max-width: 768px) */
           @media (max-width: 768px) {
             .header { padding: 15px 20px; }
             .mobile-menu-btn { display: block; }
-            
-            /* Sidebar hidden by default on mobile, toggled via state */
             .sidebar { position: absolute; top: 0; left: 0; height: 100%; z-index: 100; transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
-            
-            /* Overlay when sidebar is open */
             .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 90; }
             .sidebar-overlay.open { display: block; }
-
             .content-area { padding: 20px; }
             .dashboard-cards-container { flex-direction: column; }
             .middle-section-container { flex-direction: column; }
             .shortcuts-container { flex-direction: column; }
-            
-            /* Chat Responsiveness */
             .hidden-mobile { display: none !important; }
             .back-btn-mobile { display: block; }
             .chat-sidebar { width: 100%; border-right: none; }
-            
             .form-row { flex-direction: column; gap: 15px; }
           }
 
-          /* Small Mobile (max-width: 480px) */
           @media (max-width: 480px) {
             .header-right { font-size: 11px; }
-            .logo-container img { max-height: 40px; } /* Slightly smaller logo on very small screens */
-            .products-grid { grid-template-columns: 1fr; } /* Stack products 1 by 1 on small mobile */
+            .logo-container img { max-height: 40px; } 
+            .products-grid { grid-template-columns: 1fr; } 
           }
         `}
       </style>
@@ -1153,10 +1221,9 @@ const SellerDashboard = () => {
             <Menu size={24} />
           </button>
           
-          {/* Custom Logo Integration - fixed logout issue and size */}
-          <Link to="/" className="logo-container">
+          <div className="logo-container" onClick={() => window.location.href = '/'}>
             <img src={logoImage} alt="Weyfeir Logo" />
-          </Link>
+          </div>
         </div>
 
         <div className="header-right">
@@ -1232,7 +1299,6 @@ const SellerDashboard = () => {
           {activeTab === 'profile' && renderManageProfile()}
           {activeTab === 'settings' && renderShopSettings()}
         </div>
-
       </div>
     </div>
   );

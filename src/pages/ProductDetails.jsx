@@ -18,10 +18,13 @@ const ProductDetails = () => {
       .then(data => setProduct(data))
       .catch(err => console.error(err));
       
-    // Pre-fill customer data if logged in
+    // Pre-fill data if ANY user (Customer OR Seller) is logged in
     const customerData = JSON.parse(localStorage.getItem('customerData'));
-    if(customerData) {
-      setShippingDetails(prev => ({ ...prev, name: customerData.fullName, phone: customerData.phoneNumber || '' }));
+    const sellerData = JSON.parse(localStorage.getItem('sellerData'));
+    const activeUser = customerData || sellerData;
+
+    if(activeUser) {
+      setShippingDetails(prev => ({ ...prev, name: activeUser.fullName, phone: activeUser.phoneNumber || '' }));
     }
   }, [id, API_BASE_URL]);
 
@@ -38,7 +41,9 @@ const ProductDetails = () => {
 
   const handleBuyNow = () => {
     const customerData = JSON.parse(localStorage.getItem('customerData'));
-    if (!customerData) {
+    const sellerData = JSON.parse(localStorage.getItem('sellerData'));
+    
+    if (!customerData && !sellerData) {
       alert("Please login to place an order!");
       navigate('/login');
       return;
@@ -53,12 +58,15 @@ const ProductDetails = () => {
     }
 
     const customerData = JSON.parse(localStorage.getItem('customerData'));
+    const sellerData = JSON.parse(localStorage.getItem('sellerData'));
+    const activeUser = customerData || sellerData;
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer_id: customerData.id,
+          customer_id: activeUser.id,
           items: [{ ...product, quantity: 1 }],
           shipping_name: shippingDetails.name,
           shipping_phone: shippingDetails.phone,
@@ -69,7 +77,13 @@ const ProductDetails = () => {
       if (response.ok) {
         alert("✅ Order Placed Successfully!");
         setShowCheckoutModal(false);
-        navigate('/dashboard'); 
+        
+        // Redirect to correct dashboard
+        if (sellerData) {
+          navigate('/seller-dashboard');
+        } else {
+          navigate('/dashboard'); 
+        }
       } else {
         alert("❌ Failed to place order.");
       }

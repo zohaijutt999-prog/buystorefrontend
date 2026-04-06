@@ -15,9 +15,13 @@ const Cart = () => {
     const savedCart = JSON.parse(localStorage.getItem('cart')) || [];
     setCartItems(savedCart);
 
+    // Pre-fill data if ANY user (Customer OR Seller) is logged in
     const customerData = JSON.parse(localStorage.getItem('customerData'));
-    if(customerData) {
-      setShippingDetails(prev => ({ ...prev, name: customerData.fullName, phone: customerData.phoneNumber || '' }));
+    const sellerData = JSON.parse(localStorage.getItem('sellerData'));
+    const activeUser = customerData || sellerData;
+    
+    if(activeUser) {
+      setShippingDetails(prev => ({ ...prev, name: activeUser.fullName, phone: activeUser.phoneNumber || '' }));
     }
   }, []);
 
@@ -33,7 +37,9 @@ const Cart = () => {
 
   const handleOpenCheckout = () => {
     const customerData = JSON.parse(localStorage.getItem('customerData'));
-    if (!customerData) {
+    const sellerData = JSON.parse(localStorage.getItem('sellerData'));
+    
+    if (!customerData && !sellerData) {
       alert("Please login to place an order!");
       navigate('/login');
       return;
@@ -48,12 +54,15 @@ const Cart = () => {
     }
 
     const customerData = JSON.parse(localStorage.getItem('customerData'));
+    const sellerData = JSON.parse(localStorage.getItem('sellerData'));
+    const activeUser = customerData || sellerData; // Use whichever account is logged in
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer_id: customerData.id,
+          customer_id: activeUser.id, // Save active user's ID
           items: cartItems,
           shipping_name: shippingDetails.name,
           shipping_phone: shippingDetails.phone,
@@ -65,7 +74,13 @@ const Cart = () => {
         alert("✅ Order Placed Successfully!");
         localStorage.removeItem('cart'); 
         setShowCheckoutModal(false);
-        navigate('/dashboard'); 
+        
+        // Redirect to the correct dashboard
+        if (sellerData) {
+          navigate('/seller-dashboard');
+        } else {
+          navigate('/dashboard'); 
+        }
       } else {
         alert("❌ Failed to place order.");
       }
