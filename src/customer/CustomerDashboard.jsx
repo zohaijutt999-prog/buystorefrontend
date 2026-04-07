@@ -69,9 +69,7 @@ const CustomerDashboard = () => {
     }
 
     const handleResize = () => {
-      if (window.innerWidth > 768) {
-        setIsSidebarOpen(false);
-      }
+      if (window.innerWidth > 768) setIsSidebarOpen(false);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -104,11 +102,8 @@ const CustomerDashboard = () => {
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     const existingItem = cart.find(item => item.id === product.id);
     
-    if (existingItem) {
-      existingItem.quantity += 1;
-    } else {
-      cart.push({ ...product, quantity: 1 });
-    }
+    if (existingItem) existingItem.quantity += 1;
+    else cart.push({ ...product, quantity: 1 });
     
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartCount();
@@ -142,10 +137,7 @@ const CustomerDashboard = () => {
       if (chatImageFile) formData.append('chatImage', chatImageFile);
       if (attachedImageUrl) formData.append('existing_image_url', attachedImageUrl); 
 
-      await fetch(`${API_BASE_URL}/api/chat`, {
-        method: 'POST',
-        body: formData 
-      });
+      await fetch(`${API_BASE_URL}/api/chat`, { method: 'POST', body: formData });
       
       setChatMessage('');
       setChatImageFile(null); 
@@ -158,9 +150,7 @@ const CustomerDashboard = () => {
   const handleUpdateProfile = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/customer/profile/${userData.id}`, { 
-        method: 'PUT', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(profileForm) 
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profileForm) 
       });
       if (res.ok) {
         alert('✅ Profile Updated Successfully!');
@@ -183,6 +173,28 @@ const CustomerDashboard = () => {
     setIsSidebarOpen(false); 
   };
 
+  // --- HIGHLY ROBUST IMAGE PARSER ---
+  const renderChatImage = (url) => {
+    if (!url || url === 'null' || url === 'undefined' || String(url).trim() === '') return null;
+    
+    let finalUrl = String(url);
+    
+    // Fix double slash issue (//uploads)
+    if (finalUrl.startsWith('//')) {
+      finalUrl = finalUrl.replace('//', '/');
+    }
+    
+    // Prepend base URL if it's a relative path
+    if (finalUrl.startsWith('/uploads')) {
+      const cleanBaseUrl = API_BASE_URL.replace(/\/$/, ''); // Remove trailing slash
+      finalUrl = `${cleanBaseUrl}${finalUrl}`;
+    }
+    
+    // Final check: Remove any accidental double slashes in the path (excluding http://)
+    return finalUrl.replace(/([^:]\/)\/+/g, "$1");
+  };
+
+  // --- VIEWS ---
   const renderDashboard = () => (
     <div>
       <h2 className="section-title">Dashboard Overview</h2>
@@ -300,6 +312,7 @@ const CustomerDashboard = () => {
 
   const renderChat = () => (
     <div className="chat-container">
+      
       <div className={`chat-sidebar ${activeChatSeller ? 'hidden-mobile' : ''}`}>
         <div className="chat-sidebar-header">
            <MessageSquare size={18}/> Sellers
@@ -335,16 +348,16 @@ const CustomerDashboard = () => {
                 messages.map(msg => (
                   <div key={msg.id} className={`chat-message-row ${msg.sender === 'customer' ? 'sent' : 'received'}`}>
                     <div className={`chat-bubble ${msg.sender === 'customer' ? 'sent-bubble' : 'received-bubble'}`}>
-                      {/* Fixed Line Break and Message Check */}
-                      {msg.message && msg.message !== 'null' && <div>{msg.message}</div>}
+                      {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
                       
-                      {/* Fixed Blank Image check */}
-                      {msg.image_url && msg.image_url !== 'null' && msg.image_url !== 'undefined' && (
-                        <a href={msg.image_url.startsWith('http') ? msg.image_url : `${API_BASE_URL}${msg.image_url}`} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
+                      {/* Secure Image Rendering */}
+                      {renderChatImage(msg.image_url) && (
+                        <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
                           <img 
-                            src={msg.image_url.startsWith('http') ? msg.image_url : `${API_BASE_URL}${msg.image_url}`}
+                            src={renderChatImage(msg.image_url)} 
                             alt="Attachment" 
-                            style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', objectFit: 'contain' }} 
+                            style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.4)', padding: '2px', objectFit: 'contain' }} 
+                            onError={(e) => { e.target.style.display = 'none'; }}
                           />
                         </a>
                       )}
@@ -486,7 +499,7 @@ const CustomerDashboard = () => {
           .status-success { background-color: #4caf50; }
           .browse-btn { background-color: #1e88e5; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
-          /* CHAT CSS UPDATES FOR LINE BREAK AND IMAGES */
+          /* CHAT STYLES */
           .chat-container { height: calc(100vh - 120px); display: flex; background-color: white; border-radius: 8px; border: 1px solid #eee; overflow: hidden; }
           .chat-sidebar { width: 250px; border-right: 1px solid #eee; background-color: #fafafa; display: flex; flex-direction: column; flex-shrink: 0; }
           .chat-sidebar-header { padding: 15px; background-color: #673ab7; color: white; font-weight: bold; display: flex; align-items: center; gap: 10px; }
@@ -495,11 +508,12 @@ const CustomerDashboard = () => {
           .chat-main { flex: 1; display: flex; flex-direction: column; background-color: #fff; min-width: 0; }
           .chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
           .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-color: #f8f9fa; }
+          
+          /* Chat Bubbles Structure */
           .chat-message-row { display: flex; gap: 10px; flex-direction: column; }
           .chat-message-row.sent { align-items: flex-end; }
           .chat-message-row.received { align-items: flex-start; }
           
-          /* Fixed text wrapping */
           .chat-bubble { padding: 12px 16px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: break-word; word-wrap: break-word; width: fit-content; max-width: 80%; display: inline-block; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
           .sent-bubble { background-color: #673ab7; color: white; border-radius: 15px 15px 0 15px; }
           .received-bubble { background-color: white; color: #333; border-radius: 15px 15px 15px 0; border: 1px solid #ddd; }

@@ -330,10 +330,22 @@ const SellerDashboard = () => {
     }
   };
 
+  // --- HIGHLY ROBUST IMAGE PARSER ---
   const renderChatImage = (url) => {
-    if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return null;
-    if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`;
-    return url;
+    if (!url || url === 'null' || url === 'undefined' || String(url).trim() === '') return null;
+    
+    let finalUrl = String(url);
+    
+    if (finalUrl.startsWith('//')) {
+      finalUrl = finalUrl.replace('//', '/');
+    }
+    
+    if (finalUrl.startsWith('/uploads')) {
+      const cleanBaseUrl = API_BASE_URL.replace(/\/$/, ''); 
+      finalUrl = `${cleanBaseUrl}${finalUrl}`;
+    }
+    
+    return finalUrl.replace(/([^:]\/)\/+/g, "$1");
   };
 
   const renderDashboard = () => {
@@ -596,12 +608,13 @@ const SellerDashboard = () => {
 
   const renderChat = () => (
     <div className="chat-container">
+      
       <div className={`chat-sidebar ${activeChatCustomer ? 'hidden-mobile' : ''}`}>
         <div className="chat-sidebar-header">
            <MessageSquare size={18}/> Customers
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No messages yet.</div>}
+          {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No customer inquiries yet.</div>}
           {chatContacts.map(contact => (
             <div key={contact.id} onClick={() => { setActiveChatCustomer(contact); fetchMessages(sellerData.id, contact.id); }} className={`chat-contact ${activeChatCustomer?.id === contact.id ? 'active' : ''}`}>
               👤 {contact.fullName}
@@ -632,15 +645,22 @@ const SellerDashboard = () => {
               {messages.length === 0 ? <div style={{textAlign: 'center', color: '#888', marginTop: '20px'}}>Send a message!</div> : 
                 messages.map(msg => (
                   <div key={msg.id} className={`chat-message-row ${msg.sender === 'seller' ? 'sent' : 'received'}`}>
+                    
+                    {/* User Icon for Customer (Received - Left Side) */}
                     {msg.sender !== 'seller' && (
-                      <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
+                      <div className="chat-avatar-icon">
+                        <User size={16} color="#555" />
+                      </div>
                     )}
                     
                     <div style={{display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'seller' ? 'flex-end' : 'flex-start', maxWidth: '80%'}}>
                        {msg.sender !== 'seller' && <span style={{fontSize: '11px', color: '#888', marginBottom: '3px', marginLeft: '5px'}}>{activeChatCustomer.email}</span>}
                        <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
+                         
+                         {/* Fixed Line Break and Message Check */}
                          {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
                          
+                         {/* Fixed Blank Image check */}
                          {renderChatImage(msg.image_url) && (
                            <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
                              <img 
@@ -654,8 +674,11 @@ const SellerDashboard = () => {
                        </div>
                     </div>
 
+                    {/* User Icon for Seller (Sent - Right Side) */}
                     {msg.sender === 'seller' && (
-                      <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
+                      <div className="chat-avatar-icon">
+                        <User size={16} color="#555" />
+                      </div>
                     )}
                   </div>
                 ))
@@ -665,7 +688,9 @@ const SellerDashboard = () => {
 
             <div className="chat-input-area">
               <input type="file" accept="image/*" ref={chatFileInputRef} onChange={(e) => setChatImageFile(e.target.files[0])} style={{ display: 'none' }} />
-              <button onClick={() => chatFileInputRef.current.click()} className={`upload-btn ${chatImageFile ? 'has-file' : ''}`}><ImageIcon size={24} /></button>
+              <button onClick={() => chatFileInputRef.current.click()} className={`upload-btn ${chatImageFile ? 'has-file' : ''}`}>
+                <ImageIcon size={24} />
+              </button>
               {chatImageFile && <span className="file-name">{chatImageFile.name}</span>}
               <input type="text" placeholder="Type a message..." value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="chat-input" />
               <button onClick={handleSendMessage} className="send-btn" style={{backgroundColor: 'transparent', color: '#888'}}><Send size={24}/></button>
@@ -1067,7 +1092,7 @@ const SellerDashboard = () => {
           /* Header */
           .header { background-color: #ff5722; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; color: white; z-index: 20; position: relative; }
           .logo-container { display: flex; alignItems: center; cursor: pointer; max-width: 150px; }
-          .logo-container img { width: 100%; height: auto; max-height: 60px; object-fit: contain; } 
+          .logo-container img { width: 100%; height: auto; max-height: 60px; object-fit: contain; }
           .header-right { display: flex; gap: 20px; align-items: center; font-size: 12px; font-weight: bold; }
           .mobile-menu-btn { display: none; background: none; border: none; color: white; cursor: pointer; padding: 5px; }
 
@@ -1086,7 +1111,7 @@ const SellerDashboard = () => {
           .content-area { flex: 1; padding: 40px 50px; overflow-y: auto; background-color: #f8f9fb; }
           .section-title { font-size: 20px; color: #333; margin-bottom: 20px; border-bottom: 2px solid #ff5722; display: inline-block; padding-bottom: 5px; }
           
-          /* Dashboard Cards (New Color Scheme) */
+          /* Dashboard Cards */
           .dashboard-cards-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
           .dashboard-card { flex: 1; min-width: 200px; color: white; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s; }
           .dashboard-card:hover { transform: translateY(-3px); }
@@ -1098,7 +1123,7 @@ const SellerDashboard = () => {
           .card-value { margin: 0; font-size: 28px; }
           .card-icon-bg { background-color: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; }
 
-          /* Middle & Bottom Sections */
+          /* Middle Sections */
           .middle-section-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
           .card-box { background-color: white; border-radius: 8px; padding: 20px; border: 1px solid #eee; flex: 1; min-width: 250px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
           .card-box-title { color: #1e88e5; margin: 0 0 20px 0; font-size: 15px; }
