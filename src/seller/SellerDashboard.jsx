@@ -11,14 +11,13 @@ import logoImage from '../assets/1.png';
 const SellerDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [productAddMode, setProductAddMode] = useState('new'); 
   const [globalProducts, setGlobalProducts] = useState([]); 
   const [selectedGlobalProducts, setSelectedGlobalProducts] = useState([]); 
   
@@ -41,7 +40,7 @@ const SellerDashboard = () => {
 
   const [withdrawalHistory, setWithdrawalHistory] = useState([]);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('USDT');
+  const [paymentMethod, setPaymentMethod] = useState('USDT (TRC20)');
   const [walletAddress, setWalletAddress] = useState('');
   const [withdrawNote, setWithdrawNote] = useState('');
 
@@ -103,6 +102,7 @@ const SellerDashboard = () => {
   const handleOrdersToggle = () => {
     setIsOrdersOpen(!isOrdersOpen);
   };
+
 
   const fetchProducts = async (sellerId) => {
     try {
@@ -197,33 +197,6 @@ const SellerDashboard = () => {
         alert("❌ Failed to submit request.");
       }
     } catch (error) { alert("Server Error."); }
-  };
-
-  const handleAddProduct = async () => {
-    try {
-      const calculatedProfit = parseFloat(newProduct.price) * 0.20;
-      const formData = new FormData();
-      formData.append('seller_id', sellerData.id);
-      formData.append('title', newProduct.title);
-      formData.append('category', newProduct.category);
-      formData.append('price', newProduct.price);
-      formData.append('stock_qty', newProduct.stock_qty);
-      formData.append('description', newProduct.description);
-      formData.append('profit', calculatedProfit);
-      if (productImageFile) formData.append('productImage', productImageFile);
-
-      const response = await fetch(`${API_BASE_URL}/api/seller/products`, { method: 'POST', body: formData });
-
-      if (response.ok) {
-        alert('✅ Product Added Successfully!');
-        setShowAddProductModal(false);
-        setNewProduct({ title: '', category: '', price: '', stock_qty: '', description: '' });
-        setProductImageFile(null);
-        fetchProducts(sellerData.id);
-      } else {
-        alert('❌ Failed to add product.');
-      }
-    } catch (error) { alert('❌ Server error while adding product.'); }
   };
 
   const handleAddSelectedGlobalProducts = async () => {
@@ -357,15 +330,12 @@ const SellerDashboard = () => {
     }
   };
 
-  // Chat Helper Function to ensure images load
   const renderChatImage = (url) => {
     if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return null;
     if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`;
     return url;
   };
 
-
-  // --- VIEWS ---
   const renderDashboard = () => {
     const categoryCounts = products.reduce((acc, p) => {
       acc[p.category] = (acc[p.category] || 0) + 1;
@@ -626,23 +596,20 @@ const SellerDashboard = () => {
 
   const renderChat = () => (
     <div className="chat-container">
-      
-      {/* Sidebar: Contacts */}
       <div className={`chat-sidebar ${activeChatCustomer ? 'hidden-mobile' : ''}`}>
         <div className="chat-sidebar-header">
-           <MessageSquare size={18}/> Chat Messages
+           <MessageSquare size={18}/> Customers
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No messages yet.</div>}
           {chatContacts.map(contact => (
             <div key={contact.id} onClick={() => { setActiveChatCustomer(contact); fetchMessages(sellerData.id, contact.id); }} className={`chat-contact ${activeChatCustomer?.id === contact.id ? 'active' : ''}`}>
-              <User size={16} /> {contact.fullName}
+              👤 {contact.fullName}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Main Chat Area */}
       <div className={`chat-main ${!activeChatCustomer ? 'hidden-mobile' : ''}`}>
         {activeChatCustomer ? (
           <>
@@ -665,26 +632,21 @@ const SellerDashboard = () => {
               {messages.length === 0 ? <div style={{textAlign: 'center', color: '#888', marginTop: '20px'}}>Send a message!</div> : 
                 messages.map(msg => (
                   <div key={msg.id} className={`chat-message-row ${msg.sender === 'seller' ? 'sent' : 'received'}`}>
-                    
-                    {/* User Icon for Customer (Left Side) */}
                     {msg.sender !== 'seller' && (
-                      <div className="chat-avatar-icon">
-                        <User size={16} color="#555" />
-                      </div>
+                      <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
                     )}
                     
                     <div style={{display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'seller' ? 'flex-end' : 'flex-start', maxWidth: '80%'}}>
                        {msg.sender !== 'seller' && <span style={{fontSize: '11px', color: '#888', marginBottom: '3px', marginLeft: '5px'}}>{activeChatCustomer.email}</span>}
                        <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
-                         {msg.message && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
+                         {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
                          
-                         {/* Secure Image Rendering */}
                          {renderChatImage(msg.image_url) && (
-                           <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer">
+                           <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
                              <img 
                                src={renderChatImage(msg.image_url)} 
                                alt="Shared File" 
-                               style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', marginTop: msg.message ? '10px' : '0', backgroundColor: 'rgba(255,255,255,0.4)', padding: '2px' }} 
+                               style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.4)', padding: '2px', objectFit: 'contain' }} 
                                onError={(e) => { e.target.style.display = 'none'; }}
                              />
                            </a>
@@ -692,11 +654,8 @@ const SellerDashboard = () => {
                        </div>
                     </div>
 
-                    {/* User Icon for Seller (Right Side) */}
                     {msg.sender === 'seller' && (
-                      <div className="chat-avatar-icon">
-                        <User size={16} color="#555" />
-                      </div>
+                      <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
                     )}
                   </div>
                 ))
@@ -706,9 +665,7 @@ const SellerDashboard = () => {
 
             <div className="chat-input-area">
               <input type="file" accept="image/*" ref={chatFileInputRef} onChange={(e) => setChatImageFile(e.target.files[0])} style={{ display: 'none' }} />
-              <button onClick={() => chatFileInputRef.current.click()} className={`upload-btn ${chatImageFile ? 'has-file' : ''}`}>
-                <ImageIcon size={24} />
-              </button>
+              <button onClick={() => chatFileInputRef.current.click()} className={`upload-btn ${chatImageFile ? 'has-file' : ''}`}><ImageIcon size={24} /></button>
               {chatImageFile && <span className="file-name">{chatImageFile.name}</span>}
               <input type="text" placeholder="Type a message..." value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="chat-input" />
               <button onClick={handleSendMessage} className="send-btn" style={{backgroundColor: 'transparent', color: '#888'}}><Send size={24}/></button>
@@ -1110,7 +1067,7 @@ const SellerDashboard = () => {
           /* Header */
           .header { background-color: #ff5722; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; color: white; z-index: 20; position: relative; }
           .logo-container { display: flex; alignItems: center; cursor: pointer; max-width: 150px; }
-          .logo-container img { width: 100%; height: auto; max-height: 60px; object-fit: contain; }
+          .logo-container img { width: 100%; height: auto; max-height: 60px; object-fit: contain; } 
           .header-right { display: flex; gap: 20px; align-items: center; font-size: 12px; font-weight: bold; }
           .mobile-menu-btn { display: none; background: none; border: none; color: white; cursor: pointer; padding: 5px; }
 
@@ -1129,7 +1086,7 @@ const SellerDashboard = () => {
           .content-area { flex: 1; padding: 40px 50px; overflow-y: auto; background-color: #f8f9fb; }
           .section-title { font-size: 20px; color: #333; margin-bottom: 20px; border-bottom: 2px solid #ff5722; display: inline-block; padding-bottom: 5px; }
           
-          /* Dashboard Cards */
+          /* Dashboard Cards (New Color Scheme) */
           .dashboard-cards-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
           .dashboard-card { flex: 1; min-width: 200px; color: white; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s; }
           .dashboard-card:hover { transform: translateY(-3px); }
@@ -1141,7 +1098,7 @@ const SellerDashboard = () => {
           .card-value { margin: 0; font-size: 28px; }
           .card-icon-bg { background-color: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; }
 
-          /* Middle Sections */
+          /* Middle & Bottom Sections */
           .middle-section-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
           .card-box { background-color: white; border-radius: 8px; padding: 20px; border: 1px solid #eee; flex: 1; min-width: 250px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
           .card-box-title { color: #1e88e5; margin: 0 0 20px 0; font-size: 15px; }
@@ -1168,7 +1125,7 @@ const SellerDashboard = () => {
           
           /* Modals */
           .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; width: 100%; }
           .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
           .modal-input.no-margin { margin-bottom: 0; }
           .modal-textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; min-height: 80px; resize: vertical; }
@@ -1180,7 +1137,7 @@ const SellerDashboard = () => {
           .responsive-table td { padding: 15px; border-bottom: 1px solid #eee; }
           .status-badge { color: white; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: bold; }
 
-          /* Order Details */
+          /* Order Details Layout */
           .order-details-container { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
           .order-sidebar { background-color: white; border: 1px solid #eee; border-radius: 8px; padding: 20px; width: 350px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
           .order-items-main { flex: 1; min-width: 300px; background-color: white; border: 1px solid #eee; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
@@ -1200,7 +1157,7 @@ const SellerDashboard = () => {
           .chat-message-row { display: flex; gap: 10px; align-items: flex-end; }
           .chat-message-row.sent { justify-content: flex-end; }
           .chat-message-row.received { justify-content: flex-start; }
-          .chat-bubble { padding: 12px 16px; font-size: 14px; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+          .chat-bubble { padding: 12px 16px; font-size: 14px; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; box-shadow: 0 1px 2px rgba(0,0,0,0.05); width: fit-content; max-width: 100%; display: inline-block; }
           .sent-bubble { background-color: #1e88e5; color: white; border-radius: 15px 15px 0 15px; }
           .received-bubble { background-color: white; color: #333; border-radius: 15px 15px 15px 0; border: 1px solid #e0e0e0; }
           .system-bubble { background-color: white; color: #555; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 13px; max-width: 90%; margin: 0 auto; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }

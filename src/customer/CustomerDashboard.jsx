@@ -5,30 +5,26 @@ import {
   User, LogOut, X, Search, Heart, Truck, Edit, Edit3, 
   MessageSquare, Send, RefreshCw, Image as ImageIcon, Menu, ArrowLeft 
 } from 'lucide-react';
-import logoImage from '../assets/1.png'; // Imported the custom logo
+import logoImage from '../assets/1.png'; 
 
 const CustomerDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State for mobile sidebar toggle
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const navigate = useNavigate();
   
-  // Use environment variable for the API base URL, fallback to localhost for local testing
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
   
-  // Profile State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [userData, setUserData] = useState({ id: null, fullName: 'Loading...', email: 'Loading...', phoneNumber: '', initial: '' });
   const [profileForm, setProfileForm] = useState({ fullName: '', phoneNumber: '', email: '' });
 
-  // Live Data States
   const [liveProducts, setLiveProducts] = useState([]);
   const [myOrders, setMyOrders] = useState([]);
   const [cartCount, setCartCount] = useState(0);
 
-  // Chat State
   const [chatMessage, setChatMessage] = useState('');
   const [chatImageFile, setChatImageFile] = useState(null); 
-  const [attachedImageUrl, setAttachedImageUrl] = useState(null); // Used for pre-attached products
+  const [attachedImageUrl, setAttachedImageUrl] = useState(null); 
   
   const [activeChatSeller, setActiveChatSeller] = useState(null);
   const [chatContacts, setChatContacts] = useState([]);
@@ -36,7 +32,6 @@ const CustomerDashboard = () => {
   const chatFileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // --- INITIAL LOAD ---
   useEffect(() => {
     const storedUser = localStorage.getItem('customerData');
     if (storedUser) {
@@ -48,10 +43,8 @@ const CustomerDashboard = () => {
         phoneNumber: parsedUser.phoneNumber || '', 
         initial: parsedUser.fullName.charAt(0).toUpperCase() 
       });
-      // FIXED THE ERROR HERE: Changed parsedSeller to parsedUser
       setProfileForm({ fullName: parsedUser.fullName, phoneNumber: parsedUser.phoneNumber || '', email: parsedUser.email });
       
-      // Fetch Live Data
       fetchContacts(parsedUser.id);
       fetchProducts();
       fetchOrders(parsedUser.id);
@@ -64,7 +57,6 @@ const CustomerDashboard = () => {
         setActiveChatSeller({ id: seller.id, shopName: seller.shopName });
         fetchMessages(parsedUser.id, seller.id);
         
-        // If we passed a product from the home page, pre-fill the chat!
         if (seller.productContext) {
           setChatMessage(`Hi, I am interested in this product: ${seller.productContext.title} ($${seller.productContext.price})`);
           setAttachedImageUrl(seller.productContext.image_url);
@@ -76,7 +68,6 @@ const CustomerDashboard = () => {
       navigate('/login');
     }
 
-    // Handle screen resize for sidebar
     const handleResize = () => {
       if (window.innerWidth > 768) {
         setIsSidebarOpen(false);
@@ -87,10 +78,8 @@ const CustomerDashboard = () => {
 
   }, [navigate]);
 
-  // Auto-scroll chat
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  // --- LIVE API CALLS (Products, Orders, Cart) ---
   const updateCartCount = () => {
     const cart = JSON.parse(localStorage.getItem('cart')) || [];
     setCartCount(cart.reduce((total, item) => total + item.quantity, 0));
@@ -126,7 +115,6 @@ const CustomerDashboard = () => {
     alert('✅ Product added to Cart!');
   };
 
-  // --- CHAT API CALLS ---
   const fetchContacts = async (custId) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/chat/customer/${custId}/contacts`);
@@ -152,7 +140,7 @@ const CustomerDashboard = () => {
       formData.append('sender', 'customer');
       formData.append('message', chatMessage);
       if (chatImageFile) formData.append('chatImage', chatImageFile);
-      if (attachedImageUrl) formData.append('existing_image_url', attachedImageUrl); // Pass the product image URL!
+      if (attachedImageUrl) formData.append('existing_image_url', attachedImageUrl); 
 
       await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
@@ -167,7 +155,6 @@ const CustomerDashboard = () => {
     } catch (e) { console.error(e); }
   };
 
-  // --- PROFILE API CALLS ---
   const handleUpdateProfile = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/customer/profile/${userData.id}`, { 
@@ -191,20 +178,11 @@ const CustomerDashboard = () => {
     window.location.href = '/'; 
   };
 
-  // Helper for tab navigation on mobile
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
-    setIsSidebarOpen(false); // Close sidebar on mobile after selecting a tab
+    setIsSidebarOpen(false); 
   };
 
-  // Chat Helper Function to ensure images load properly
-  const renderChatImage = (url) => {
-    if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return null;
-    if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`;
-    return url;
-  };
-
-  // --- VIEWS ---
   const renderDashboard = () => (
     <div>
       <h2 className="section-title">Dashboard Overview</h2>
@@ -322,8 +300,6 @@ const CustomerDashboard = () => {
 
   const renderChat = () => (
     <div className="chat-container">
-      
-      {/* Sidebar: Contacts */}
       <div className={`chat-sidebar ${activeChatSeller ? 'hidden-mobile' : ''}`}>
         <div className="chat-sidebar-header">
            <MessageSquare size={18}/> Sellers
@@ -343,7 +319,6 @@ const CustomerDashboard = () => {
         </div>
       </div>
 
-      {/* Main Chat Area */}
       <div className={`chat-main ${!activeChatSeller ? 'hidden-mobile' : ''}`}>
         {activeChatSeller ? (
           <>
@@ -360,16 +335,16 @@ const CustomerDashboard = () => {
                 messages.map(msg => (
                   <div key={msg.id} className={`chat-message-row ${msg.sender === 'customer' ? 'sent' : 'received'}`}>
                     <div className={`chat-bubble ${msg.sender === 'customer' ? 'sent-bubble' : 'received-bubble'}`}>
-                      {msg.message && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
+                      {/* Fixed Line Break and Message Check */}
+                      {msg.message && msg.message !== 'null' && <div>{msg.message}</div>}
                       
-                      {/* Secure Image Rendering */}
-                      {renderChatImage(msg.image_url) && (
-                        <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer">
+                      {/* Fixed Blank Image check */}
+                      {msg.image_url && msg.image_url !== 'null' && msg.image_url !== 'undefined' && (
+                        <a href={msg.image_url.startsWith('http') ? msg.image_url : `${API_BASE_URL}${msg.image_url}`} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
                           <img 
-                            src={renderChatImage(msg.image_url)} 
-                            alt="Shared File" 
-                            style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', marginTop: msg.message ? '10px' : '0', backgroundColor: 'rgba(255,255,255,0.4)', padding: '2px' }} 
-                            onError={(e) => { e.target.style.display = 'none'; }}
+                            src={msg.image_url.startsWith('http') ? msg.image_url : `${API_BASE_URL}${msg.image_url}`}
+                            alt="Attachment" 
+                            style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', objectFit: 'contain' }} 
                           />
                         </a>
                       )}
@@ -381,8 +356,6 @@ const CustomerDashboard = () => {
             </div>
 
             <div className="chat-input-area">
-              
-              {/* Product Thumbnail from Home Page */}
               {attachedImageUrl && (
                 <div style={{ position: 'relative', marginRight: '5px' }}>
                   <img src={attachedImageUrl} alt="Product" style={{ height: '40px', borderRadius: '4px', border: '1px solid #ddd' }} />
@@ -456,16 +429,13 @@ const CustomerDashboard = () => {
     </div>
   );
 
-  // --- MAIN LAYOUT ---
   return (
     <div className="dashboard-wrapper">
       <style>
         {`
-          /* Core Variables & Resets */
           * { box-sizing: border-box; }
           .dashboard-wrapper { display: flex; flex-direction: column; height: 100vh; width: 100vw; font-family: sans-serif; background-color: #f4f7fe; overflow: hidden; }
           
-          /* Header */
           .header { background-color: #ff624d; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; color: white; z-index: 20; position: relative; }
           .logo-container { display: flex; alignItems: center; cursor: pointer; max-width: 150px; }
           .logo-container img { width: 100%; height: auto; max-height: 40px; object-fit: contain; }
@@ -473,10 +443,8 @@ const CustomerDashboard = () => {
           .cart-btn { cursor: pointer; background-color: rgba(0,0,0,0.1); padding: 8px 15px; border-radius: 20px; display: flex; align-items: center; gap: 5px; }
           .mobile-menu-btn { display: none; background: none; border: none; color: white; cursor: pointer; padding: 5px; }
 
-          /* Layout */
           .body-container { display: flex; flex: 1; overflow: hidden; position: relative; }
           
-          /* Sidebar */
           .sidebar { width: 260px; background-color: #2b3674; color: white; display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 15; }
           .sidebar-profile { padding: 40px 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
           .profile-initial { width: 70px; height: 70px; border-radius: 50%; background-color: #5c6bc0; color: white; display: flex; justify-content: center; align-items: center; font-size: 28px; margin: 0 auto 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
@@ -485,11 +453,9 @@ const CustomerDashboard = () => {
           .nav-item span { font-size: 15px; }
           .nav-item.active span { font-weight: bold; }
           
-          /* Main Content */
           .content-area { flex: 1; padding: 40px 50px; overflow-y: auto; background-color: #f4f7fe; }
           .section-title { font-size: 20px; color: #333; margin-bottom: 20px; border-bottom: 2px solid #673ab7; display: inline-block; padding-bottom: 5px; }
           
-          /* Dashboard Cards */
           .dashboard-cards-container { display: flex; gap: 20px; margin-bottom: 40px; flex-wrap: wrap; }
           .dashboard-card { flex: 1; min-width: 200px; color: white; padding: 25px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s; }
           .dashboard-card:hover { transform: translateY(-3px); }
@@ -498,12 +464,10 @@ const CustomerDashboard = () => {
           .card-subtitle { margin: 0 0 5px 0; font-size: 13px; font-weight: bold; }
           .card-value { margin: 0; font-size: 28px; }
 
-          /* Shortcuts */
           .shortcuts-container { display: flex; gap: 20px; flex-wrap: wrap; }
           .shortcut-card { flex: 1; min-width: 140px; background-color: white; padding: 20px; border-radius: 12px; text-align: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: transform 0.2s; }
           .shortcut-card:hover { transform: translateY(-5px); }
 
-          /* Products */
           .search-input { width: 100%; padding: 15px 40px 15px 20px; border-radius: 8px; border: 1px solid #ddd; outline: none; font-size: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
           .products-grid { display: flex; flex-wrap: wrap; gap: 20px; }
           .customer-product-card { width: calc(33.333% - 14px); min-width: 220px; border: 1px solid #eaeaea; border-radius: 8px; padding: 15px; background-color: white; transition: box-shadow 0.3s, transform 0.2s; cursor: pointer; }
@@ -513,7 +477,6 @@ const CustomerDashboard = () => {
           .add-to-cart-btn { width: 100%; background-color: #1e88e5; color: white; border: none; padding: 10px; border-radius: 4px; display: flex; justify-content: center; align-items: center; gap: 8px; font-weight: bold; cursor: pointer; font-size: 13px; transition: background-color 0.2s; }
           .add-to-cart-btn:hover { background-color: #1565c0; }
 
-          /* Tables */
           .table-container { background-color: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.02); overflow-x: auto; }
           .responsive-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; min-width: 600px; }
           .responsive-table th { padding: 15px; border-bottom: 2px solid #ddd; background-color: #f4f7fe; color: #333; }
@@ -523,21 +486,21 @@ const CustomerDashboard = () => {
           .status-success { background-color: #4caf50; }
           .browse-btn { background-color: #1e88e5; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
-          /* Chat */
+          /* CHAT CSS UPDATES FOR LINE BREAK AND IMAGES */
           .chat-container { height: calc(100vh - 120px); display: flex; background-color: white; border-radius: 8px; border: 1px solid #eee; overflow: hidden; }
           .chat-sidebar { width: 250px; border-right: 1px solid #eee; background-color: #fafafa; display: flex; flex-direction: column; flex-shrink: 0; }
           .chat-sidebar-header { padding: 15px; background-color: #673ab7; color: white; font-weight: bold; display: flex; align-items: center; gap: 10px; }
           .chat-contact { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; }
-          .chat-contact.active { background-color: #eedeeb; font-weight: bold; }
+          .chat-contact.active { background-color: #eedeeb; font-weight: bold; color: #673ab7; }
           .chat-main { flex: 1; display: flex; flex-direction: column; background-color: #fff; min-width: 0; }
           .chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
           .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-color: #f8f9fa; }
+          .chat-message-row { display: flex; gap: 10px; flex-direction: column; }
+          .chat-message-row.sent { align-items: flex-end; }
+          .chat-message-row.received { align-items: flex-start; }
           
-          /* Updated Chat Bubble Styles */
-          .chat-message-row { display: flex; gap: 10px; }
-          .chat-message-row.sent { align-self: flex-end; }
-          .chat-message-row.received { align-self: flex-start; }
-          .chat-bubble { padding: 10px 15px; font-size: 13px; max-width: 80%; line-height: 1.4; word-wrap: break-word; white-space: pre-wrap; }
+          /* Fixed text wrapping */
+          .chat-bubble { padding: 12px 16px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: break-word; word-wrap: break-word; width: fit-content; max-width: 80%; display: inline-block; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
           .sent-bubble { background-color: #673ab7; color: white; border-radius: 15px 15px 0 15px; }
           .received-bubble { background-color: white; color: #333; border-radius: 15px 15px 15px 0; border: 1px solid #ddd; }
           
@@ -551,7 +514,6 @@ const CustomerDashboard = () => {
           .empty-chat-state { flex: 1; display: flex; justify-content: center; align-items: center; color: #888; flex-direction: column; gap: 10px; }
           .back-btn-mobile { display: none; background: none; border: none; cursor: pointer; color: #333; padding: 0; }
 
-          /* Profile */
           .profile-container { background-color: white; padding: 30px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
           .edit-btn { border: 1px solid #1e88e5; color: #1e88e5; background-color: transparent; padding: 5px 15px; border-radius: 4px; display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
           .cancel-btn { border: 1px solid #f44336; color: #f44336; background-color: transparent; padding: 5px 15px; border-radius: 4px; display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
@@ -566,42 +528,28 @@ const CustomerDashboard = () => {
           .postal-input { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 4px; outline: none; box-sizing: border-box; }
           .save-profile-btn { background-color: #1e88e5; color: white; border: none; padding: 12px 25px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
-
-          /* --- MEDIA QUERIES FOR RESPONSIVENESS --- */
-          
-          /* Tablet (max-width: 992px) */
           @media (max-width: 992px) {
             .content-area { padding: 30px; }
             .customer-product-card { width: calc(50% - 10px); }
           }
 
-          /* Mobile (max-width: 768px) */
           @media (max-width: 768px) {
             .header { padding: 15px 20px; }
             .mobile-menu-btn { display: block; }
-            
-            /* Sidebar hidden by default on mobile, toggled via state */
             .sidebar { position: absolute; top: 0; left: 0; height: 100%; z-index: 100; transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
-            
-            /* Overlay when sidebar is open */
             .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 90; }
             .sidebar-overlay.open { display: block; }
-
             .content-area { padding: 20px; }
             .customer-product-card { width: 100%; }
             .dashboard-cards-container { flex-direction: column; }
             .shortcuts-container { flex-direction: column; }
-            
-            /* Chat Responsiveness */
             .hidden-mobile { display: none !important; }
             .back-btn-mobile { display: block; }
             .chat-sidebar { width: 100%; border-right: none; }
-            
             .form-row { flex-direction: column; gap: 15px; }
           }
 
-          /* Small Mobile (max-width: 480px) */
           @media (max-width: 480px) {
             .header-right span { font-size: 11px; padding: 6px 10px; }
             .header-right div { font-size: 11px; }
@@ -617,7 +565,6 @@ const CustomerDashboard = () => {
             <Menu size={24} />
           </button>
           
-          {/* Custom Logo Integration - fixed logout issue */}
           <div className="logo-container" onClick={() => window.location.href = '/'}>
             <img src={logoImage} alt="Weyfeir Logo" />
           </div>
@@ -633,13 +580,10 @@ const CustomerDashboard = () => {
 
       {/* BODY */}
       <div className="body-container">
-        
-        {/* Mobile Sidebar Overlay */}
         <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
 
         {/* SIDEBAR */}
         <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-          
           <div className="sidebar-profile">
             <div className="profile-initial">
               {userData.initial}
