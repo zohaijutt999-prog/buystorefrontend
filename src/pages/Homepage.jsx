@@ -17,49 +17,40 @@ const categories = [
   { name: 'Women Clothing & Fashion', img: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=150&q=80' },
   { name: 'Men Clothing & Fashion', img: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=150&q=80' },
   { name: 'Computers & Cameras', img: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=150&q=80' },
-  { name: 'Kids & toy', img: 'https://images.unsplash.com/photo-1558877385-81a1c7e67d72?auto=format&fit=crop&w=150&q=80' }, // Random new picture added here
+  { name: 'Kids & toy', img: 'https://images.unsplash.com/photo-1558877385-81a1c7e67d72?auto=format&fit=crop&w=150&q=80' }, 
   { name: 'Sports & outdoor', img: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=150&q=80' },
   { name: 'Automobile & Motorcycle', img: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=150&q=80' },
   { name: 'Jewelry & Watches', img: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=150&q=80' }
 ];
 
-// --- EXACT PRODUCTS FROM WEYFEIR.VERCEL.APP ---
-const dummyNewProducts = [
-  { id: 'p1', title: "Boston t-shirt", price: "8.98", oldPrice: "9.48", img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p2', title: "Blue jacket", price: "27.14", oldPrice: "27.64", img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p3', title: "Power tool", price: "45.99", oldPrice: "55.99", img: "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p4', title: "Luxury watch", price: "149.99", oldPrice: "199.99", img: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p5', title: "Headphones", price: "89.99", oldPrice: "129.99", img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=300&q=80" }
-];
-
-const dummyFeaturedProducts = [
-  { id: 'p6', title: "Camera", price: "599.99", oldPrice: "799.99", img: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p7', title: "Premium headphones with case", price: "24.00", oldPrice: "25.00", img: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p8', title: "Gold jewelry collection", price: "31.89", oldPrice: "32.49", img: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p9', title: "Skincare products", price: "19.95", oldPrice: "24.99", img: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p10', title: "Smart watch", price: "49.99", oldPrice: "59.99", img: "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=300&q=80" }
-];
-
-const dummyBestSelling = [
-  { id: 'p11', title: "Professional camera", price: "399.00", oldPrice: "449.00", img: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p12', title: "Luxury watch", price: "23.00", oldPrice: "24.00", img: "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p13', title: "Power tool", price: "27.00", oldPrice: "30.00", img: "https://images.unsplash.com/photo-1572981779307-38b8cabb2407?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p14', title: "Boston t-shirt", price: "8.98", oldPrice: "9.48", img: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=300&q=80" },
-  { id: 'p15', title: "Blue jacket", price: "27.14", oldPrice: "27.64", img: "https://images.unsplash.com/photo-1559551409-dadc959f76b8?auto=format&fit=crop&w=300&q=80" }
-];
-
-
 const HomePage = () => {
   const navigate = useNavigate();
   const [liveProducts, setLiveProducts] = useState([]);
+  
+  // Categorized Live Products
+  const [newProducts, setNewProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [bestSellingProducts, setBestSellingProducts] = useState([]);
 
   // Use environment variable for the API base URL, fallback to localhost for local testing
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
+  // Helper function to shuffle array randomly
+  const shuffleArray = (array) => {
+    return array.slice().sort(() => Math.random() - 0.5);
+  };
+
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/products/all`)
       .then(res => res.json())
-      .then(data => setLiveProducts(data))
+      .then(data => {
+        setLiveProducts(data);
+        
+        // Create 3 different shuffled arrays from the live database
+        setNewProducts(shuffleArray(data).slice(0, 10)); // Top 10 random for New
+        setFeaturedProducts(shuffleArray(data).slice(0, 10)); // Top 10 random for Featured
+        setBestSellingProducts(shuffleArray(data).slice(0, 10)); // Top 10 random for Best Selling
+      })
       .catch(err => console.error(err));
   }, [API_BASE_URL]);
 
@@ -102,7 +93,7 @@ const HomePage = () => {
 
   const ProductCard = ({ product }) => (
     <div 
-      onClick={() => product.seller_id ? navigate(`/product/${product.id}`) : alert("Click on Live Database Products to see details.")} 
+      onClick={() => navigate(`/product/${product.id}`)} 
       style={{ minWidth: '220px', width: '220px', border: '1px solid #eaeaea', borderRadius: '8px', padding: '15px', backgroundColor: 'white', transition: 'box-shadow 0.3s', display: 'flex', flexDirection: 'column', cursor: 'pointer' }} 
       className="product-card"
     >
@@ -110,17 +101,14 @@ const HomePage = () => {
         <img src={product.image_url || product.img} alt={product.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
       </div>
       <h4 style={{ color: '#c62828', fontSize: '18px', margin: '0 0 5px 0' }}>${product.price}</h4>
-      {product.oldPrice && <p style={{ textDecoration: 'line-through', color: '#999', margin: '0 0 5px 0', fontSize: '12px' }}>${product.oldPrice}</p>}
       <p style={{ fontSize: '11px', color: '#888', margin: '0 0 10px 0' }}>Sold by: <b>{product.shopName || 'Weyfeir Store'}</b></p>
       <div style={{ color: '#fbbf24', fontSize: '12px', marginBottom: '8px' }}>★★★★★</div>
       <p style={{ fontSize: '13px', color: '#444', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{product.title}</p>
       
       <div style={{ display: 'flex', gap: '5px', marginTop: '15px' }}>
         <button onClick={(e) => handleAddToCart(e, product)} style={{ flex: 1, backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>🛒 Cart</button>
-        {/* Only show chat if it's a live product from a seller */}
-        {product.seller_id && (
-          <button onClick={(e) => { e.stopPropagation(); handleStartChat(product); }} style={{ flex: 1, backgroundColor: '#673ab7', color: 'white', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>💬 Chat</button>
-        )}
+        {/* Always show chat since these are live products now */}
+        <button onClick={(e) => { e.stopPropagation(); handleStartChat(product); }} style={{ flex: 1, backgroundColor: '#673ab7', color: 'white', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>💬 Chat</button>
       </div>
     </div>
   );
@@ -131,7 +119,7 @@ const HomePage = () => {
         <h2 style={{ color: highlight ? '#c62828' : '#333', fontSize: '20px', margin: 0, fontWeight: 'bold' }}>{title}</h2>
       </div>
       {products.length === 0 ? (
-         <p style={{ color: '#888' }}>Loading products...</p>
+         <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>No products available yet.</p>
       ) : (
         <div className="hide-scrollbar" style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '15px', scrollSnapType: 'x mandatory' }}>
           {products.map((item, index) => (
@@ -177,10 +165,13 @@ const HomePage = () => {
             <span style={{ backgroundColor: 'red', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>Hot</span>
             <div style={{ marginTop: '20px', backgroundColor: 'white', padding: '15px', border: '1px solid #fecaca', borderRadius: '8px' }}>
               <div style={{ backgroundColor: '#f4f5f8', padding: '10px', borderRadius: '6px', marginBottom: '10px' }}>
-                <img src={liveProducts[0]?.image_url || dummyNewProducts[0].img} alt="Deal" style={{ height: '120px', width: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+                {liveProducts[0] ? (
+                   <img src={liveProducts[0].image_url} alt="Deal" style={{ height: '120px', width: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+                ) : (
+                   <div style={{ height: '120px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#888' }}>No Deals</div>
+                )}
               </div>
-              <h4 style={{ color: '#c62828', fontSize: '24px', margin: '10px 0 0 0' }}>${liveProducts[0]?.price || dummyNewProducts[0].price}</h4>
-              <p style={{ textDecoration: 'line-through', color: '#999', margin: 0, fontSize: '14px' }}>${liveProducts[0]?.oldPrice || dummyNewProducts[0].oldPrice}</p>
+              <h4 style={{ color: '#c62828', fontSize: '24px', margin: '10px 0 0 0' }}>${liveProducts[0]?.price || '0.00'}</h4>
             </div>
           </div>
         </section>
@@ -197,15 +188,10 @@ const HomePage = () => {
           ))}
         </section>
 
-        {/* LIVE DATABASE PRODUCTS (Dynamic from your Hostinger Database) - NOW AT THE TOP */}
-        <div style={{ backgroundColor: '#f9fafd', padding: '30px', borderRadius: '12px', marginBottom: '40px', border: '1px solid #e0e6ed' }}>
-          <ProductSlider title="Sellers Live Products" products={liveProducts} highlight={false} />
-        </div>
-
-        {/* DUMMY SECTIONS FROM WEYFEIR APP */}
-        <ProductSlider title="New Products" products={dummyNewProducts} highlight={true} />
-        <ProductSlider title="Featured Products" products={dummyFeaturedProducts} highlight={true} />
-        <ProductSlider title="Best Selling Products" products={dummyBestSelling} highlight={true} />
+        {/* LIVE DATABASE PRODUCTS CATEGORIZED */}
+        <ProductSlider title="New Products" products={newProducts} highlight={true} />
+        <ProductSlider title="Featured Products" products={featuredProducts} highlight={true} />
+        <ProductSlider title="Best Selling Products" products={bestSellingProducts} highlight={true} />
 
         {/* PROMO BANNERS */}
         <section style={{ display: 'flex', gap: '20px', marginBottom: '40px', marginTop: '20px', flexWrap: 'wrap' }}>
