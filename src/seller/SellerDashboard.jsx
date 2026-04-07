@@ -4,7 +4,7 @@ import {
   Home, Box, ShoppingCart, ChevronDown, ChevronUp, Wallet, 
   MessageSquare, User, Settings, LogOut, Plus, Eye, 
   Truck, CheckSquare, XCircle, Image as ImageIcon, Send, 
-  RefreshCw, ArrowLeft, Edit3, X, Building, DollarSign, Edit, Menu, Check, Search, Bell
+  RefreshCw, ArrowLeft, Edit3, X, Building, DollarSign, Edit, Menu, Check, Search
 } from 'lucide-react';
 import logoImage from '../assets/1.png'; 
 
@@ -18,7 +18,7 @@ const SellerDashboard = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [productAddMode, setProductAddMode] = useState('new'); 
+  const [productAddMode, setProductAddMode] = useState('browse'); // Defaulting to browse since custom is removed
   const [globalProducts, setGlobalProducts] = useState([]); 
   const [selectedGlobalProducts, setSelectedGlobalProducts] = useState([]); 
   
@@ -59,10 +59,6 @@ const SellerDashboard = () => {
   const [newProduct, setNewProduct] = useState({ title: '', category: '', price: '', stock_qty: '', description: '' });
   const [productImageFile, setProductImageFile] = useState(null);
 
-  // Notification States
-  const [newOrdersBadge, setNewOrdersBadge] = useState(0);
-  const [newChatBadge, setNewChatBadge] = useState(0);
-
   useEffect(() => {
     const storedSeller = localStorage.getItem('sellerData');
     if (storedSeller) {
@@ -84,49 +80,20 @@ const SellerDashboard = () => {
       fetchOrders(parsedSeller.id); 
       fetchWithdrawals(parsedSeller.id);
       fetchGlobalProducts(); 
-
-      // Start Polling for Live Notifications (Every 10 seconds)
-      const intervalId = setInterval(() => {
-        fetchOrders(parsedSeller.id);
-        fetchContacts(parsedSeller.id);
-      }, 10000);
-
-      const handleResize = () => { if (window.innerWidth > 768) setIsSidebarOpen(false); };
-      window.addEventListener('resize', handleResize);
-      
-      return () => {
-        clearInterval(intervalId);
-        window.removeEventListener('resize', handleResize);
-      };
     } else {
       window.location.href = '/seller-login';
     }
+
+    const handleResize = () => {
+      if (window.innerWidth > 768) setIsSidebarOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => { 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); 
   }, [messages]);
-
-  // Handle Smart Notification Badges Logic
-  useEffect(() => {
-    if (!sellerData.id) return;
-
-    if (activeTab === 'all-orders' || activeTab === 'direct-orders') {
-      setNewOrdersBadge(0);
-      localStorage.setItem(`ordersCount_${sellerData.id}`, allOrders.length.toString());
-    } else {
-      const prevOrdersCount = parseInt(localStorage.getItem(`ordersCount_${sellerData.id}`) || '0');
-      if (allOrders.length > prevOrdersCount) setNewOrdersBadge(allOrders.length - prevOrdersCount);
-    }
-
-    if (activeTab === 'chat') {
-      setNewChatBadge(0);
-      localStorage.setItem(`chatsCount_${sellerData.id}`, chatContacts.length.toString());
-    } else {
-      const prevChatsCount = parseInt(localStorage.getItem(`chatsCount_${sellerData.id}`) || '0');
-      if (chatContacts.length > prevChatsCount) setNewChatBadge(chatContacts.length - prevChatsCount);
-    }
-  }, [activeTab, allOrders, chatContacts, sellerData.id]);
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -136,6 +103,7 @@ const SellerDashboard = () => {
   const handleOrdersToggle = () => {
     setIsOrdersOpen(!isOrdersOpen);
   };
+
 
   const fetchProducts = async (sellerId) => {
     try {
@@ -266,11 +234,12 @@ const SellerDashboard = () => {
     }
   };
 
+  // Restricting Select All to maximum 120 products to prevent database overload
   const handleSelectAllGlobalProducts = () => {
-    if (selectedGlobalProducts.length === globalProducts.length) {
-      setSelectedGlobalProducts([]);
+    if (selectedGlobalProducts.length > 0) {
+      setSelectedGlobalProducts([]); // Deselect all if any are currently selected
     } else {
-      setSelectedGlobalProducts([...globalProducts]);
+      setSelectedGlobalProducts(globalProducts.slice(0, 120)); // Select up to 120 items max
     }
   };
 
@@ -561,7 +530,7 @@ const SellerDashboard = () => {
                   <input 
                     type="checkbox" 
                     style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                    checked={selectedGlobalProducts.length === globalProducts.length && globalProducts.length > 0}
+                    checked={selectedGlobalProducts.length > 0 && selectedGlobalProducts.length === Math.min(globalProducts.length, 120)}
                     onChange={handleSelectAllGlobalProducts}
                   /> 
                   Select All
@@ -636,12 +605,13 @@ const SellerDashboard = () => {
   const renderChat = () => (
     <div className="chat-container">
       
+      {/* Sidebar: Contacts */}
       <div className={`chat-sidebar ${activeChatCustomer ? 'hidden-mobile' : ''}`}>
         <div className="chat-sidebar-header">
-           <MessageSquare size={18}/> Chat Messages
+           <MessageSquare size={18}/> Customers
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No messages yet.</div>}
+          {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No customer inquiries yet.</div>}
           {chatContacts.map(contact => (
             <div key={contact.id} onClick={() => { setActiveChatCustomer(contact); fetchMessages(sellerData.id, contact.id); }} className={`chat-contact ${activeChatCustomer?.id === contact.id ? 'active' : ''}`}>
               <User size={16} /> {contact.fullName}
@@ -650,6 +620,7 @@ const SellerDashboard = () => {
         </div>
       </div>
 
+      {/* Main Chat Area */}
       <div className={`chat-main ${!activeChatCustomer ? 'hidden-mobile' : ''}`}>
         {activeChatCustomer ? (
           <>
@@ -662,6 +633,7 @@ const SellerDashboard = () => {
             </div>
             
             <div className="chat-messages">
+              {/* System Greeting */}
               <div className="chat-message-row received" style={{marginTop: '10px', marginBottom: '20px'}}>
                 <div className="chat-bubble system-bubble">
                    <p style={{margin: '0 0 10px 0'}}>Please note that your store is linked to your Gurentor account. Any positive or negative reviews received on your Weyfeir store will also be reflected on your Gurentor store.</p>
@@ -672,16 +644,22 @@ const SellerDashboard = () => {
               {messages.length === 0 ? <div style={{textAlign: 'center', color: '#888', marginTop: '20px'}}>Send a message!</div> : 
                 messages.map(msg => (
                   <div key={msg.id} className={`chat-message-row ${msg.sender === 'seller' ? 'sent' : 'received'}`}>
+                    
+                    {/* User Icon for Customer (Received - Left Side) */}
                     {msg.sender !== 'seller' && (
-                      <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
+                      <div className="chat-avatar-icon">
+                        <User size={16} color="#555" />
+                      </div>
                     )}
                     
                     <div style={{display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'seller' ? 'flex-end' : 'flex-start', maxWidth: '80%'}}>
                        {msg.sender !== 'seller' && <span style={{fontSize: '11px', color: '#888', marginBottom: '3px', marginLeft: '5px'}}>{activeChatCustomer.email}</span>}
                        <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
                          
+                         {/* Fixed Line Break and Message Check */}
                          {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
                          
+                         {/* Fixed Blank Image check */}
                          {renderChatImage(msg.image_url) && (
                            <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
                              <img 
@@ -695,8 +673,11 @@ const SellerDashboard = () => {
                        </div>
                     </div>
 
+                    {/* User Icon for Seller (Sent - Right Side) */}
                     {msg.sender === 'seller' && (
-                      <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
+                      <div className="chat-avatar-icon">
+                        <User size={16} color="#555" />
+                      </div>
                     )}
                   </div>
                 ))
@@ -759,11 +740,10 @@ const SellerDashboard = () => {
                 <p style={{ margin: '0 0 5px 0', fontSize: '13px', color: '#555' }}><strong>Address:</strong> {selectedOrder.shipping_address || 'N/A'}</p>
               </div>
 
-              {selectedOrder.seller_id === sellerData.id && (
-                <button onClick={() => { setEditingOrder(selectedOrder); setNewOrderStatus(selectedOrder.status); }} style={{ width: '100%', backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                  <Edit size={18}/> UPDATE STATUS
-                </button>
-              )}
+              {/* Edit button is now available to update status on ANY order */}
+              <button onClick={() => { setEditingOrder(selectedOrder); setNewOrderStatus(selectedOrder.status); }} style={{ width: '100%', backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+                <Edit size={18}/> UPDATE STATUS
+              </button>
             </div>
 
             <div className="order-items-main">
@@ -876,9 +856,8 @@ const SellerDashboard = () => {
                     </td>
                     <td style={{ color: '#1e88e5', textAlign: 'center' }}>
                       <Eye size={18} style={{ cursor: 'pointer', marginRight: '10px' }} onClick={() => setSelectedOrder(o)} title="View Details" />
-                      {o.seller_id === sellerData.id && (
-                         <Edit size={18} style={{ cursor: 'pointer' }} onClick={() => { setEditingOrder(o); setNewOrderStatus(o.status); }} title="Edit Status" />
-                      )}
+                      {/* Allow edit on ANY order as requested */}
+                      <Edit size={18} style={{ cursor: 'pointer' }} onClick={() => { setEditingOrder(o); setNewOrderStatus(o.status); }} title="Edit Status" />
                     </td>
                   </tr>
                 ))}
@@ -1294,24 +1273,12 @@ const SellerDashboard = () => {
           </div>
 
           <nav style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
-            {[
-              { id: 'dashboard', icon: <Home size={18} />, text: 'Dashboard', badge: 0 },
-              { id: 'products', icon: <Box size={18} />, text: 'Products', badge: 0 },
-            ].map(item => (
-              <div 
-                key={item.id} 
-                onClick={() => handleTabChange(item.id)} 
-                className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-              >
-                <div className="nav-item-content">
-                   {item.icon}
-                   <span>{item.text}</span>
-                </div>
-                {item.badge > 0 && <span className="notif-badge">{item.badge}</span>}
-              </div>
-            ))}
-            
-            {/* Orders Dropdown with Badge */}
+            <div onClick={() => handleTabChange('dashboard')} className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}>
+              <Home size={18} /> <span>Dashboard</span>
+            </div>
+            <div onClick={() => handleTabChange('products')} className={`nav-item ${activeTab === 'products' ? 'active' : ''}`}>
+              <Box size={18} /> <span>Products</span>
+            </div>
             <div>
               <div onClick={handleOrdersToggle} className={`nav-item ${(activeTab === 'all-orders' || activeTab === 'direct-orders') ? 'active' : ''}`}>
                 <div className="nav-item-content">
@@ -1329,7 +1296,7 @@ const SellerDashboard = () => {
                 </div>
               )}
             </div>
-
+            
             {[
               { id: 'money', icon: <Wallet size={18} />, text: 'Money Withdraw', badge: 0 },
               { id: 'chat', icon: <MessageSquare size={18} />, text: 'Conversations', badge: newChatBadge },
