@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   ShoppingCart, LayoutDashboard, ShoppingBag, ClipboardList, 
   User, LogOut, X, Search, Heart, Truck, Edit, Edit3, 
-  MessageSquare, Send, RefreshCw, Image as ImageIcon, Menu, ArrowLeft 
+  MessageSquare, Send, RefreshCw, Image as ImageIcon, Menu, ArrowLeft, Bell
 } from 'lucide-react';
 import logoImage from '../assets/1.png'; 
 
@@ -31,6 +31,10 @@ const CustomerDashboard = () => {
   const [messages, setMessages] = useState([]);
   const chatFileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  // Notification States
+  const [newOrdersBadge, setNewOrdersBadge] = useState(0);
+  const [newChatBadge, setNewChatBadge] = useState(0);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('customerData');
@@ -64,19 +68,47 @@ const CustomerDashboard = () => {
         
         localStorage.removeItem('pendingChatSeller');
       }
+
+      // Start Polling for Live Notifications (Every 10 seconds)
+      const intervalId = setInterval(() => {
+        fetchOrders(parsedUser.id);
+        fetchContacts(parsedUser.id);
+      }, 10000);
+
+      const handleResize = () => { if (window.innerWidth > 768) setIsSidebarOpen(false); };
+      window.addEventListener('resize', handleResize);
+      
+      return () => {
+        clearInterval(intervalId);
+        window.removeEventListener('resize', handleResize);
+      };
     } else {
       navigate('/login');
     }
-
-    const handleResize = () => {
-      if (window.innerWidth > 768) setIsSidebarOpen(false);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-
   }, [navigate]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  // Handle Smart Notification Badges Logic
+  useEffect(() => {
+    if (!userData.id) return;
+
+    if (activeTab === 'orders') {
+      setNewOrdersBadge(0);
+      localStorage.setItem(`custOrdersCount_${userData.id}`, myOrders.length.toString());
+    } else {
+      const prevOrdersCount = parseInt(localStorage.getItem(`custOrdersCount_${userData.id}`) || '0');
+      if (myOrders.length > prevOrdersCount) setNewOrdersBadge(myOrders.length - prevOrdersCount);
+    }
+
+    if (activeTab === 'chat') {
+      setNewChatBadge(0);
+      localStorage.setItem(`custChatsCount_${userData.id}`, chatContacts.length.toString());
+    } else {
+      const prevChatsCount = parseInt(localStorage.getItem(`custChatsCount_${userData.id}`) || '0');
+      if (chatContacts.length > prevChatsCount) setNewChatBadge(chatContacts.length - prevChatsCount);
+    }
+  }, [activeTab, myOrders, chatContacts, userData.id]);
 
   const updateCartCount = () => {
     const cart = JSON.parse(localStorage.getItem('cart')) || [];
@@ -101,7 +133,6 @@ const CustomerDashboard = () => {
     e.stopPropagation();
     let cart = JSON.parse(localStorage.getItem('cart')) || [];
     const existingItem = cart.find(item => item.id === product.id);
-    
     if (existingItem) existingItem.quantity += 1;
     else cart.push({ ...product, quantity: 1 });
     
@@ -173,28 +204,17 @@ const CustomerDashboard = () => {
     setIsSidebarOpen(false); 
   };
 
-  // --- HIGHLY ROBUST IMAGE PARSER ---
   const renderChatImage = (url) => {
     if (!url || url === 'null' || url === 'undefined' || String(url).trim() === '') return null;
-    
     let finalUrl = String(url);
-    
-    // Fix double slash issue (//uploads)
-    if (finalUrl.startsWith('//')) {
-      finalUrl = finalUrl.replace('//', '/');
-    }
-    
-    // Prepend base URL if it's a relative path
+    if (finalUrl.startsWith('//')) finalUrl = finalUrl.replace('//', '/');
     if (finalUrl.startsWith('/uploads')) {
-      const cleanBaseUrl = API_BASE_URL.replace(/\/$/, ''); // Remove trailing slash
+      const cleanBaseUrl = API_BASE_URL.replace(/\/$/, ''); 
       finalUrl = `${cleanBaseUrl}${finalUrl}`;
     }
-    
-    // Final check: Remove any accidental double slashes in the path (excluding http://)
     return finalUrl.replace(/([^:]\/)\/+/g, "$1");
   };
 
-  // --- VIEWS ---
   const renderDashboard = () => (
     <div>
       <h2 className="section-title">Dashboard Overview</h2>
@@ -312,7 +332,6 @@ const CustomerDashboard = () => {
 
   const renderChat = () => (
     <div className="chat-container">
-      
       <div className={`chat-sidebar ${activeChatSeller ? 'hidden-mobile' : ''}`}>
         <div className="chat-sidebar-header">
            <MessageSquare size={18}/> Sellers
@@ -350,7 +369,6 @@ const CustomerDashboard = () => {
                     <div className={`chat-bubble ${msg.sender === 'customer' ? 'sent-bubble' : 'received-bubble'}`}>
                       {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
                       
-                      {/* Secure Image Rendering */}
                       {renderChatImage(msg.image_url) && (
                         <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
                           <img 
@@ -461,11 +479,14 @@ const CustomerDashboard = () => {
           .sidebar { width: 260px; background-color: #2b3674; color: white; display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 15; }
           .sidebar-profile { padding: 40px 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
           .profile-initial { width: 70px; height: 70px; border-radius: 50%; background-color: #5c6bc0; color: white; display: flex; justify-content: center; align-items: center; font-size: 28px; margin: 0 auto 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-          .nav-item { display: flex; align-items: center; gap: 15px; padding: 15px 30px; cursor: pointer; border-left: 4px solid transparent; transition: background-color 0.2s; }
+          .nav-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; cursor: pointer; border-left: 4px solid transparent; transition: background-color 0.2s; }
           .nav-item.active { background-color: #3949ab; border-left-color: white; }
-          .nav-item span { font-size: 15px; }
-          .nav-item.active span { font-weight: bold; }
+          .nav-item-content { display: flex; align-items: center; gap: 15px; font-size: 15px; }
+          .nav-item.active .nav-item-content { font-weight: bold; }
           
+          /* Notification Badge CSS */
+          .notif-badge { background-color: #ff3d00; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; }
+
           .content-area { flex: 1; padding: 40px 50px; overflow-y: auto; background-color: #f4f7fe; }
           .section-title { font-size: 20px; color: #333; margin-bottom: 20px; border-bottom: 2px solid #673ab7; display: inline-block; padding-bottom: 5px; }
           
@@ -499,7 +520,6 @@ const CustomerDashboard = () => {
           .status-success { background-color: #4caf50; }
           .browse-btn { background-color: #1e88e5; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
-          /* CHAT STYLES */
           .chat-container { height: calc(100vh - 120px); display: flex; background-color: white; border-radius: 8px; border: 1px solid #eee; overflow: hidden; }
           .chat-sidebar { width: 250px; border-right: 1px solid #eee; background-color: #fafafa; display: flex; flex-direction: column; flex-shrink: 0; }
           .chat-sidebar-header { padding: 15px; background-color: #673ab7; color: white; font-weight: bold; display: flex; align-items: center; gap: 10px; }
@@ -508,8 +528,6 @@ const CustomerDashboard = () => {
           .chat-main { flex: 1; display: flex; flex-direction: column; background-color: #fff; min-width: 0; }
           .chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
           .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-color: #f8f9fa; }
-          
-          /* Chat Bubbles Structure */
           .chat-message-row { display: flex; gap: 10px; flex-direction: column; }
           .chat-message-row.sent { align-items: flex-end; }
           .chat-message-row.received { align-items: flex-start; }
@@ -608,20 +626,23 @@ const CustomerDashboard = () => {
 
           <nav style={{ flex: 1, padding: '20px 0', overflowY: 'auto' }}>
             {[
-              { id: 'dashboard', icon: <LayoutDashboard size={20} />, text: 'Dashboard' },
-              { id: 'products', icon: <ShoppingBag size={20} />, text: 'Shop Products' },
-              { id: 'cart', icon: <ShoppingCart size={20} />, text: 'Shopping Cart', action: () => { navigate('/cart'); setIsSidebarOpen(false); } },
-              { id: 'orders', icon: <ClipboardList size={20} />, text: 'My Orders' },
-              { id: 'chat', icon: <MessageSquare size={20} />, text: 'Conversations' },
-              { id: 'profile', icon: <User size={20} />, text: 'Manage Profile' }
+              { id: 'dashboard', icon: <LayoutDashboard size={20} />, text: 'Dashboard', badge: 0 },
+              { id: 'products', icon: <ShoppingBag size={20} />, text: 'Shop Products', badge: 0 },
+              { id: 'cart', icon: <ShoppingCart size={20} />, text: 'Shopping Cart', action: () => { navigate('/cart'); setIsSidebarOpen(false); }, badge: 0 },
+              { id: 'orders', icon: <ClipboardList size={20} />, text: 'My Orders', badge: newOrdersBadge },
+              { id: 'chat', icon: <MessageSquare size={20} />, text: 'Conversations', badge: newChatBadge },
+              { id: 'profile', icon: <User size={20} />, text: 'Manage Profile', badge: 0 }
             ].map(item => (
               <div 
                 key={item.id} 
                 onClick={() => item.action ? item.action() : handleTabChange(item.id)} 
                 className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
               >
-                {item.icon}
-                <span>{item.text}</span>
+                <div className="nav-item-content">
+                   {item.icon}
+                   <span>{item.text}</span>
+                </div>
+                {item.badge > 0 && <span className="notif-badge">{item.badge}</span>}
               </div>
             ))}
           </nav>

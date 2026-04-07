@@ -4,7 +4,7 @@ import {
   Home, Box, ShoppingCart, ChevronDown, ChevronUp, Wallet, 
   MessageSquare, User, Settings, LogOut, Plus, Eye, 
   Truck, CheckSquare, XCircle, Image as ImageIcon, Send, 
-  RefreshCw, ArrowLeft, Edit3, X, Building, DollarSign, Edit, Menu, Check, Search
+  RefreshCw, ArrowLeft, Edit3, X, Building, DollarSign, Edit, Menu, Check, Search, Bell
 } from 'lucide-react';
 import logoImage from '../assets/1.png'; 
 
@@ -18,6 +18,7 @@ const SellerDashboard = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [productAddMode, setProductAddMode] = useState('new'); 
   const [globalProducts, setGlobalProducts] = useState([]); 
   const [selectedGlobalProducts, setSelectedGlobalProducts] = useState([]); 
   
@@ -58,6 +59,10 @@ const SellerDashboard = () => {
   const [newProduct, setNewProduct] = useState({ title: '', category: '', price: '', stock_qty: '', description: '' });
   const [productImageFile, setProductImageFile] = useState(null);
 
+  // Notification States
+  const [newOrdersBadge, setNewOrdersBadge] = useState(0);
+  const [newChatBadge, setNewChatBadge] = useState(0);
+
   useEffect(() => {
     const storedSeller = localStorage.getItem('sellerData');
     if (storedSeller) {
@@ -79,20 +84,49 @@ const SellerDashboard = () => {
       fetchOrders(parsedSeller.id); 
       fetchWithdrawals(parsedSeller.id);
       fetchGlobalProducts(); 
+
+      // Start Polling for Live Notifications (Every 10 seconds)
+      const intervalId = setInterval(() => {
+        fetchOrders(parsedSeller.id);
+        fetchContacts(parsedSeller.id);
+      }, 10000);
+
+      const handleResize = () => { if (window.innerWidth > 768) setIsSidebarOpen(false); };
+      window.addEventListener('resize', handleResize);
+      
+      return () => {
+        clearInterval(intervalId);
+        window.removeEventListener('resize', handleResize);
+      };
     } else {
       window.location.href = '/seller-login';
     }
-
-    const handleResize = () => {
-      if (window.innerWidth > 768) setIsSidebarOpen(false);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => { 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); 
   }, [messages]);
+
+  // Handle Smart Notification Badges Logic
+  useEffect(() => {
+    if (!sellerData.id) return;
+
+    if (activeTab === 'all-orders' || activeTab === 'direct-orders') {
+      setNewOrdersBadge(0);
+      localStorage.setItem(`ordersCount_${sellerData.id}`, allOrders.length.toString());
+    } else {
+      const prevOrdersCount = parseInt(localStorage.getItem(`ordersCount_${sellerData.id}`) || '0');
+      if (allOrders.length > prevOrdersCount) setNewOrdersBadge(allOrders.length - prevOrdersCount);
+    }
+
+    if (activeTab === 'chat') {
+      setNewChatBadge(0);
+      localStorage.setItem(`chatsCount_${sellerData.id}`, chatContacts.length.toString());
+    } else {
+      const prevChatsCount = parseInt(localStorage.getItem(`chatsCount_${sellerData.id}`) || '0');
+      if (chatContacts.length > prevChatsCount) setNewChatBadge(chatContacts.length - prevChatsCount);
+    }
+  }, [activeTab, allOrders, chatContacts, sellerData.id]);
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -102,7 +136,6 @@ const SellerDashboard = () => {
   const handleOrdersToggle = () => {
     setIsOrdersOpen(!isOrdersOpen);
   };
-
 
   const fetchProducts = async (sellerId) => {
     try {
@@ -330,24 +363,18 @@ const SellerDashboard = () => {
     }
   };
 
-  // --- HIGHLY ROBUST IMAGE PARSER ---
   const renderChatImage = (url) => {
     if (!url || url === 'null' || url === 'undefined' || String(url).trim() === '') return null;
-    
     let finalUrl = String(url);
-    
-    if (finalUrl.startsWith('//')) {
-      finalUrl = finalUrl.replace('//', '/');
-    }
-    
+    if (finalUrl.startsWith('//')) finalUrl = finalUrl.replace('//', '/');
     if (finalUrl.startsWith('/uploads')) {
       const cleanBaseUrl = API_BASE_URL.replace(/\/$/, ''); 
       finalUrl = `${cleanBaseUrl}${finalUrl}`;
     }
-    
     return finalUrl.replace(/([^:]\/)\/+/g, "$1");
   };
 
+  // --- VIEWS ---
   const renderDashboard = () => {
     const categoryCounts = products.reduce((acc, p) => {
       acc[p.category] = (acc[p.category] || 0) + 1;
@@ -611,13 +638,13 @@ const SellerDashboard = () => {
       
       <div className={`chat-sidebar ${activeChatCustomer ? 'hidden-mobile' : ''}`}>
         <div className="chat-sidebar-header">
-           <MessageSquare size={18}/> Customers
+           <MessageSquare size={18}/> Chat Messages
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No customer inquiries yet.</div>}
+          {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No messages yet.</div>}
           {chatContacts.map(contact => (
             <div key={contact.id} onClick={() => { setActiveChatCustomer(contact); fetchMessages(sellerData.id, contact.id); }} className={`chat-contact ${activeChatCustomer?.id === contact.id ? 'active' : ''}`}>
-              👤 {contact.fullName}
+              <User size={16} /> {contact.fullName}
             </div>
           ))}
         </div>
@@ -645,22 +672,16 @@ const SellerDashboard = () => {
               {messages.length === 0 ? <div style={{textAlign: 'center', color: '#888', marginTop: '20px'}}>Send a message!</div> : 
                 messages.map(msg => (
                   <div key={msg.id} className={`chat-message-row ${msg.sender === 'seller' ? 'sent' : 'received'}`}>
-                    
-                    {/* User Icon for Customer (Received - Left Side) */}
                     {msg.sender !== 'seller' && (
-                      <div className="chat-avatar-icon">
-                        <User size={16} color="#555" />
-                      </div>
+                      <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
                     )}
                     
                     <div style={{display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'seller' ? 'flex-end' : 'flex-start', maxWidth: '80%'}}>
                        {msg.sender !== 'seller' && <span style={{fontSize: '11px', color: '#888', marginBottom: '3px', marginLeft: '5px'}}>{activeChatCustomer.email}</span>}
                        <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
                          
-                         {/* Fixed Line Break and Message Check */}
                          {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
                          
-                         {/* Fixed Blank Image check */}
                          {renderChatImage(msg.image_url) && (
                            <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
                              <img 
@@ -674,11 +695,8 @@ const SellerDashboard = () => {
                        </div>
                     </div>
 
-                    {/* User Icon for Seller (Sent - Right Side) */}
                     {msg.sender === 'seller' && (
-                      <div className="chat-avatar-icon">
-                        <User size={16} color="#555" />
-                      </div>
+                      <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
                     )}
                   </div>
                 ))
@@ -1092,7 +1110,7 @@ const SellerDashboard = () => {
           /* Header */
           .header { background-color: #ff5722; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; color: white; z-index: 20; position: relative; }
           .logo-container { display: flex; alignItems: center; cursor: pointer; max-width: 150px; }
-          .logo-container img { width: 100%; height: auto; max-height: 60px; object-fit: contain; }
+          .logo-container img { width: 100%; height: auto; max-height: 60px; object-fit: contain; } 
           .header-right { display: flex; gap: 20px; align-items: center; font-size: 12px; font-weight: bold; }
           .mobile-menu-btn { display: none; background: none; border: none; color: white; cursor: pointer; padding: 5px; }
 
@@ -1102,16 +1120,19 @@ const SellerDashboard = () => {
           /* Sidebar */
           .sidebar { width: 260px; background-color: #ff5722; color: white; display: flex; flex-direction: column; transition: transform 0.3s ease; z-index: 15; flex-shrink: 0;}
           .sidebar-profile { padding: 30px 20px 20px; text-align: center; }
-          .nav-item { display: flex; align-items: center; gap: 15px; padding: 15px 30px; cursor: pointer; border-left: 4px solid transparent; transition: background-color 0.2s; }
+          .nav-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; cursor: pointer; border-left: 4px solid transparent; transition: background-color 0.2s; }
           .nav-item.active { background-color: #e64a19; border-left-color: white; }
-          .nav-item span { font-size: 14px; }
-          .nav-item.active span { font-weight: bold; }
+          .nav-item-content { display: flex; align-items: center; gap: 15px; font-size: 14px; }
+          .nav-item.active .nav-item-content { font-weight: bold; }
+
+          /* Notification Badge CSS */
+          .notif-badge { background-color: #ff3d00; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; }
           
           /* Main Content */
           .content-area { flex: 1; padding: 40px 50px; overflow-y: auto; background-color: #f8f9fb; }
           .section-title { font-size: 20px; color: #333; margin-bottom: 20px; border-bottom: 2px solid #ff5722; display: inline-block; padding-bottom: 5px; }
           
-          /* Dashboard Cards */
+          /* Dashboard Cards (New Color Scheme) */
           .dashboard-cards-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
           .dashboard-card { flex: 1; min-width: 200px; color: white; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.2s; }
           .dashboard-card:hover { transform: translateY(-3px); }
@@ -1123,7 +1144,7 @@ const SellerDashboard = () => {
           .card-value { margin: 0; font-size: 28px; }
           .card-icon-bg { background-color: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; }
 
-          /* Middle Sections */
+          /* Middle & Bottom Sections */
           .middle-section-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
           .card-box { background-color: white; border-radius: 8px; padding: 20px; border: 1px solid #eee; flex: 1; min-width: 250px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
           .card-box-title { color: #1e88e5; margin: 0 0 20px 0; font-size: 15px; }
@@ -1150,7 +1171,7 @@ const SellerDashboard = () => {
           
           /* Modals */
           .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; width: 100%; }
+          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
           .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
           .modal-input.no-margin { margin-bottom: 0; }
           .modal-textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; min-height: 80px; resize: vertical; }
@@ -1273,18 +1294,33 @@ const SellerDashboard = () => {
           </div>
 
           <nav style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
-            <div onClick={() => handleTabChange('dashboard')} className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}>
-              <Home size={18} /> <span>Dashboard</span>
-            </div>
-            <div onClick={() => handleTabChange('products')} className={`nav-item ${activeTab === 'products' ? 'active' : ''}`}>
-              <Box size={18} /> <span>Products</span>
-            </div>
+            {[
+              { id: 'dashboard', icon: <Home size={18} />, text: 'Dashboard', badge: 0 },
+              { id: 'products', icon: <Box size={18} />, text: 'Products', badge: 0 },
+            ].map(item => (
+              <div 
+                key={item.id} 
+                onClick={() => handleTabChange(item.id)} 
+                className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+              >
+                <div className="nav-item-content">
+                   {item.icon}
+                   <span>{item.text}</span>
+                </div>
+                {item.badge > 0 && <span className="notif-badge">{item.badge}</span>}
+              </div>
+            ))}
+            
+            {/* Orders Dropdown with Badge */}
             <div>
               <div onClick={handleOrdersToggle} className={`nav-item ${(activeTab === 'all-orders' || activeTab === 'direct-orders') ? 'active' : ''}`}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="nav-item-content">
                   <ShoppingCart size={18} /> <span>Orders</span>
                 </div>
-                {isOrdersOpen ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
+                  {newOrdersBadge > 0 && <span className="notif-badge">{newOrdersBadge}</span>}
+                  {isOrdersOpen ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                </div>
               </div>
               {isOrdersOpen && (
                 <div style={{ backgroundColor: 'rgba(0,0,0,0.1)', padding: '5px 0' }}>
@@ -1293,18 +1329,25 @@ const SellerDashboard = () => {
                 </div>
               )}
             </div>
-            <div onClick={() => handleTabChange('money')} className={`nav-item ${activeTab === 'money' ? 'active' : ''}`}>
-              <Wallet size={18} /> <span>Money Withdraw</span>
-            </div>
-            <div onClick={() => handleTabChange('chat')} className={`nav-item ${activeTab === 'chat' ? 'active' : ''}`}>
-              <MessageSquare size={18} /> <span>Conversations</span>
-            </div>
-            <div onClick={() => handleTabChange('profile')} className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}>
-              <User size={18} /> <span>Manage Profile</span>
-            </div>
-            <div onClick={() => handleTabChange('settings')} className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}>
-              <Settings size={18} /> <span>Shop Setting</span>
-            </div>
+
+            {[
+              { id: 'money', icon: <Wallet size={18} />, text: 'Money Withdraw', badge: 0 },
+              { id: 'chat', icon: <MessageSquare size={18} />, text: 'Conversations', badge: newChatBadge },
+              { id: 'profile', icon: <User size={18} />, text: 'Manage Profile', badge: 0 },
+              { id: 'settings', icon: <Settings size={18} />, text: 'Shop Setting', badge: 0 }
+            ].map(item => (
+              <div 
+                key={item.id} 
+                onClick={() => handleTabChange(item.id)} 
+                className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+              >
+                <div className="nav-item-content">
+                   {item.icon}
+                   <span>{item.text}</span>
+                </div>
+                {item.badge > 0 && <span className="notif-badge">{item.badge}</span>}
+              </div>
+            ))}
           </nav>
 
           <div style={{ padding: '20px' }}>
