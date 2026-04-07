@@ -197,6 +197,13 @@ const CustomerDashboard = () => {
     setIsSidebarOpen(false); // Close sidebar on mobile after selecting a tab
   };
 
+  // Chat Helper Function to ensure images load properly
+  const renderChatImage = (url) => {
+    if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return null;
+    if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`;
+    return url;
+  };
+
   // --- VIEWS ---
   const renderDashboard = () => (
     <div>
@@ -353,8 +360,19 @@ const CustomerDashboard = () => {
                 messages.map(msg => (
                   <div key={msg.id} className={`chat-message-row ${msg.sender === 'customer' ? 'sent' : 'received'}`}>
                     <div className={`chat-bubble ${msg.sender === 'customer' ? 'sent-bubble' : 'received-bubble'}`}>
-                      {msg.message && <div>{msg.message}</div>}
-                      {msg.image_url && <img src={msg.image_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: '4px', marginTop: msg.message ? '10px' : '0' }} />}
+                      {msg.message && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
+                      
+                      {/* Secure Image Rendering */}
+                      {renderChatImage(msg.image_url) && (
+                        <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer">
+                          <img 
+                            src={renderChatImage(msg.image_url)} 
+                            alt="Shared File" 
+                            style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', marginTop: msg.message ? '10px' : '0', backgroundColor: 'rgba(255,255,255,0.4)', padding: '2px' }} 
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))
@@ -514,12 +532,15 @@ const CustomerDashboard = () => {
           .chat-main { flex: 1; display: flex; flex-direction: column; background-color: #fff; min-width: 0; }
           .chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
           .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background-color: #f8f9fa; }
+          
+          /* Updated Chat Bubble Styles */
           .chat-message-row { display: flex; gap: 10px; }
           .chat-message-row.sent { align-self: flex-end; }
           .chat-message-row.received { align-self: flex-start; }
-          .chat-bubble { padding: 10px 15px; font-size: 13px; max-width: 80%; line-height: 1.4; word-wrap: break-word; }
+          .chat-bubble { padding: 10px 15px; font-size: 13px; max-width: 80%; line-height: 1.4; word-wrap: break-word; white-space: pre-wrap; }
           .sent-bubble { background-color: #673ab7; color: white; border-radius: 15px 15px 0 15px; }
           .received-bubble { background-color: white; color: #333; border-radius: 15px 15px 15px 0; border: 1px solid #ddd; }
+          
           .chat-input-area { padding: 15px; background-color: white; border-top: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
           .remove-image-icon { position: absolute; top: -5px; right: -5px; background-color: #e53935; color: white; border-radius: 50%; cursor: pointer; }
           .upload-btn { background-color: transparent; border: none; cursor: pointer; color: #888; border-radius: 50%; padding: 5px; }

@@ -11,13 +11,14 @@ import logoImage from '../assets/1.png';
 const SellerDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingShop, setIsEditingShop] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [productAddMode, setProductAddMode] = useState('new'); 
   const [globalProducts, setGlobalProducts] = useState([]); 
   const [selectedGlobalProducts, setSelectedGlobalProducts] = useState([]); 
   
@@ -40,7 +41,7 @@ const SellerDashboard = () => {
 
   const [withdrawalHistory, setWithdrawalHistory] = useState([]);
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('USDT (TRC20)');
+  const [paymentMethod, setPaymentMethod] = useState('USDT');
   const [walletAddress, setWalletAddress] = useState('');
   const [withdrawNote, setWithdrawNote] = useState('');
 
@@ -103,7 +104,6 @@ const SellerDashboard = () => {
     setIsOrdersOpen(!isOrdersOpen);
   };
 
-
   const fetchProducts = async (sellerId) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/seller/products/${sellerId}`);
@@ -129,7 +129,6 @@ const SellerDashboard = () => {
         setTotalSales(data.totalSale);
       }
     } catch (error) { 
-      console.error('Error fetching combined orders, falling back to basic route', error);
       try {
         const fallbackRes = await fetch(`${API_BASE_URL}/api/orders/seller/${sellerId}`);
         const fallbackData = await fallbackRes.json();
@@ -200,6 +199,33 @@ const SellerDashboard = () => {
     } catch (error) { alert("Server Error."); }
   };
 
+  const handleAddProduct = async () => {
+    try {
+      const calculatedProfit = parseFloat(newProduct.price) * 0.20;
+      const formData = new FormData();
+      formData.append('seller_id', sellerData.id);
+      formData.append('title', newProduct.title);
+      formData.append('category', newProduct.category);
+      formData.append('price', newProduct.price);
+      formData.append('stock_qty', newProduct.stock_qty);
+      formData.append('description', newProduct.description);
+      formData.append('profit', calculatedProfit);
+      if (productImageFile) formData.append('productImage', productImageFile);
+
+      const response = await fetch(`${API_BASE_URL}/api/seller/products`, { method: 'POST', body: formData });
+
+      if (response.ok) {
+        alert('✅ Product Added Successfully!');
+        setShowAddProductModal(false);
+        setNewProduct({ title: '', category: '', price: '', stock_qty: '', description: '' });
+        setProductImageFile(null);
+        fetchProducts(sellerData.id);
+      } else {
+        alert('❌ Failed to add product.');
+      }
+    } catch (error) { alert('❌ Server error while adding product.'); }
+  };
+
   const handleAddSelectedGlobalProducts = async () => {
     if (selectedGlobalProducts.length === 0) {
       alert("Please select at least one product.");
@@ -219,7 +245,7 @@ const SellerDashboard = () => {
              stock_qty: prod.stock_qty || 10,
              description: prod.description || 'Sourced from main catalog.',
              profit: prod.profit || (prod.price * 0.2),
-             existing_image_url: prod.image_url // Updated to ensure correct field is parsed by backend
+             existing_image_url: prod.image_url 
            })
         });
       }
@@ -331,6 +357,15 @@ const SellerDashboard = () => {
     }
   };
 
+  // Chat Helper Function to ensure images load
+  const renderChatImage = (url) => {
+    if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return null;
+    if (url.startsWith('/uploads')) return `${API_BASE_URL}${url}`;
+    return url;
+  };
+
+
+  // --- VIEWS ---
   const renderDashboard = () => {
     const categoryCounts = products.reduce((acc, p) => {
       acc[p.category] = (acc[p.category] || 0) + 1;
@@ -488,7 +523,6 @@ const SellerDashboard = () => {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <p style={{ margin: '0 0 15px 0', color: '#1e88e5', fontSize: '14px' }}>You can add products to your inventory free of cost. No wallet balance will be deducted.</p>
               
-              {/* Search Filters */}
               <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
                 <div style={{ flex: 2, position: 'relative', minWidth: '200px' }}>
                     <label style={{ position: 'absolute', top: '-8px', left: '10px', backgroundColor: 'white', padding: '0 5px', fontSize: '11px', color: '#888' }}>Search products</label>
@@ -621,7 +655,6 @@ const SellerDashboard = () => {
             </div>
             
             <div className="chat-messages">
-              {/* System Greeting from screenshot */}
               <div className="chat-message-row received" style={{marginTop: '10px', marginBottom: '20px'}}>
                 <div className="chat-bubble system-bubble">
                    <p style={{margin: '0 0 10px 0'}}>Please note that your store is linked to your Gurentor account. Any positive or negative reviews received on your Weyfeir store will also be reflected on your Gurentor store.</p>
@@ -633,7 +666,7 @@ const SellerDashboard = () => {
                 messages.map(msg => (
                   <div key={msg.id} className={`chat-message-row ${msg.sender === 'seller' ? 'sent' : 'received'}`}>
                     
-                    {/* User Icon for Customer (Received - Left Side) */}
+                    {/* User Icon for Customer (Left Side) */}
                     {msg.sender !== 'seller' && (
                       <div className="chat-avatar-icon">
                         <User size={16} color="#555" />
@@ -644,11 +677,22 @@ const SellerDashboard = () => {
                        {msg.sender !== 'seller' && <span style={{fontSize: '11px', color: '#888', marginBottom: '3px', marginLeft: '5px'}}>{activeChatCustomer.email}</span>}
                        <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
                          {msg.message && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
-                         {msg.image_url && <img src={msg.image_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: '4px', marginTop: msg.message ? '10px' : '0' }} />}
+                         
+                         {/* Secure Image Rendering */}
+                         {renderChatImage(msg.image_url) && (
+                           <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer">
+                             <img 
+                               src={renderChatImage(msg.image_url)} 
+                               alt="Shared File" 
+                               style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', marginTop: msg.message ? '10px' : '0', backgroundColor: 'rgba(255,255,255,0.4)', padding: '2px' }} 
+                               onError={(e) => { e.target.style.display = 'none'; }}
+                             />
+                           </a>
+                         )}
                        </div>
                     </div>
 
-                    {/* User Icon for Seller (Sent - Right Side) */}
+                    {/* User Icon for Seller (Right Side) */}
                     {msg.sender === 'seller' && (
                       <div className="chat-avatar-icon">
                         <User size={16} color="#555" />
@@ -1136,7 +1180,7 @@ const SellerDashboard = () => {
           .responsive-table td { padding: 15px; border-bottom: 1px solid #eee; }
           .status-badge { color: white; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: bold; }
 
-          /* Order Details Layout */
+          /* Order Details */
           .order-details-container { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
           .order-sidebar { background-color: white; border: 1px solid #eee; border-radius: 8px; padding: 20px; width: 350px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
           .order-items-main { flex: 1; min-width: 300px; background-color: white; border: 1px solid #eee; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
