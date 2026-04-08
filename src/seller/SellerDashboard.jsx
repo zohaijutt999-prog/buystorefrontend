@@ -81,7 +81,7 @@ const SellerDashboard = () => {
       
       fetchProducts(parsedSeller.id);
       fetchContacts(parsedSeller.id);
-      fetchAllCustomers(); // Load all customers for chat list
+      fetchAllCustomers(); 
       fetchOrders(parsedSeller.id); 
       fetchWithdrawals(parsedSeller.id);
       fetchGlobalProducts(); 
@@ -89,7 +89,7 @@ const SellerDashboard = () => {
       const intervalId = setInterval(() => {
         fetchOrders(parsedSeller.id);
         fetchContacts(parsedSeller.id);
-        fetchAllCustomers(); // Keep customer list fresh
+        fetchAllCustomers(); 
       }, 10000);
 
       const handleResize = () => { if (window.innerWidth > 768) setIsSidebarOpen(false); };
@@ -187,7 +187,7 @@ const SellerDashboard = () => {
         alert('✅ Order Status Updated Successfully!');
         setEditingOrder(null);
         fetchOrders(sellerData.id); 
-        setSelectedOrder(null); // Return to main table after update
+        setSelectedOrder(null); 
       } else {
         alert('❌ Failed to update status.');
       }
@@ -337,7 +337,6 @@ const SellerDashboard = () => {
     } catch (error) { alert('Error updating shop'); }
   };
 
-  // Chat Fetch functions
   const fetchContacts = async (sellerId) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/chat/seller/${sellerId}/contacts`);
@@ -345,18 +344,14 @@ const SellerDashboard = () => {
     } catch (e) { console.error(e); }
   };
 
-  // FEATURE: Fetch all registered customers to initiate chat
   const fetchAllCustomers = async () => {
     try {
-      // In a real app you might have a dedicated route for this, e.g., `/api/customers/all`
-      // For now, if that route doesn't exist yet, we will fallback gracefully.
       const res = await fetch(`${API_BASE_URL}/api/customers/all`);
       if (res.ok) {
         const data = await res.json();
         setAllCustomers(data);
       }
     } catch (e) { 
-      // Silently catch error if API doesn't exist yet, use chatContacts as fallback
       console.log("Using existing contacts as fallback for all customers"); 
     }
   };
@@ -711,13 +706,6 @@ const SellerDashboard = () => {
               </div>
               
               <div className="chat-messages">
-                <div className="chat-message-row received" style={{marginTop: '10px', marginBottom: '20px'}}>
-                  <div className="chat-bubble system-bubble">
-                     <p style={{margin: '0 0 10px 0'}}>Please note that your store is linked to your Gurentor account. Any positive or negative reviews received on your Weyfeir store will also be reflected on your Gurentor store.</p>
-                     <p style={{margin: 0}}>Thank you for being part of the Weyfeir community. We look forward to seeing your store grow and succeed</p>
-                  </div>
-                </div>
-
                 {messages.length === 0 ? <div style={{textAlign: 'center', color: '#888', marginTop: '20px'}}>Send a message!</div> : 
                   messages.map(msg => (
                     <div key={msg.id} className={`chat-message-row ${msg.sender === 'seller' ? 'sent' : 'received'}`}>
@@ -731,10 +719,8 @@ const SellerDashboard = () => {
                          {msg.sender !== 'seller' && <span style={{fontSize: '11px', color: '#888', marginBottom: '3px', marginLeft: '5px'}}>{activeChatCustomer.fullName}</span>}
                          <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
                            
-                           {/* Fixed Line Break and Message Check */}
                            {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
                            
-                           {/* Secure Image Rendering */}
                            {renderChatImage(msg.image_url) && (
                              <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
                                <img 
@@ -914,7 +900,7 @@ const SellerDashboard = () => {
               <tbody>
                 {ordersToShow.map((o, i) => (
                   <tr key={i}>
-                    {/* Clickable Order ID triggers the detail view */}
+                    {/* Clickable Order ID to view details */}
                     <td 
                       style={{ color: '#1e88e5', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }} 
                       onClick={() => setSelectedOrder(o)}
@@ -936,7 +922,6 @@ const SellerDashboard = () => {
                     </td>
                     <td style={{ color: '#1e88e5', textAlign: 'center' }}>
                       <Eye size={18} style={{ cursor: 'pointer' }} onClick={() => setSelectedOrder(o)} title="View Details" />
-                      {/* Edit Button is Removed from Actions Column */}
                     </td>
                   </tr>
                 ))}
@@ -1229,7 +1214,7 @@ const SellerDashboard = () => {
           
           /* Modals */
           .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; width: 100%; }
           .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
           .modal-input.no-margin { margin-bottom: 0; }
           .modal-textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; min-height: 80px; resize: vertical; }
@@ -1264,7 +1249,6 @@ const SellerDashboard = () => {
           .chat-bubble { padding: 12px 16px; font-size: 14px; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; box-shadow: 0 1px 2px rgba(0,0,0,0.05); width: fit-content; max-width: 100%; display: inline-block; }
           .sent-bubble { background-color: #1e88e5; color: white; border-radius: 15px 15px 0 15px; }
           .received-bubble { background-color: white; color: #333; border-radius: 15px 15px 15px 0; border: 1px solid #e0e0e0; }
-          .system-bubble { background-color: white; color: #555; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 13px; max-width: 90%; margin: 0 auto; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
           .chat-avatar-icon { width: 32px; height: 32px; background-color: #e0e0e0; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
           
           .chat-input-area { padding: 15px; background-color: white; border-top: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
