@@ -29,7 +29,8 @@ const SellerDashboard = () => {
   const [chatMessage, setChatMessage] = useState('');
   const [chatImageFile, setChatImageFile] = useState(null); 
   const [activeChatCustomer, setActiveChatCustomer] = useState(null);
-  const [chatContacts, setChatContacts] = useState([]);
+  const [chatContacts, setChatContacts] = useState([]); // Those who messaged
+  const [allCustomers, setAllCustomers] = useState([]); // FEATURE: All registered customers
   const [messages, setMessages] = useState([]);
   const chatFileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -59,7 +60,6 @@ const SellerDashboard = () => {
   const [newProduct, setNewProduct] = useState({ title: '', category: '', price: '', stock_qty: '', description: '' });
   const [productImageFile, setProductImageFile] = useState(null);
 
-  // Notification States
   const [newOrdersBadge, setNewOrdersBadge] = useState(0);
   const [newChatBadge, setNewChatBadge] = useState(0);
 
@@ -81,14 +81,15 @@ const SellerDashboard = () => {
       
       fetchProducts(parsedSeller.id);
       fetchContacts(parsedSeller.id);
+      fetchAllCustomers(); // Load all customers for chat list
       fetchOrders(parsedSeller.id); 
       fetchWithdrawals(parsedSeller.id);
       fetchGlobalProducts(); 
 
-      // Start Polling for Live Notifications (Every 10 seconds)
       const intervalId = setInterval(() => {
         fetchOrders(parsedSeller.id);
         fetchContacts(parsedSeller.id);
+        fetchAllCustomers(); // Keep customer list fresh
       }, 10000);
 
       const handleResize = () => { if (window.innerWidth > 768) setIsSidebarOpen(false); };
@@ -107,7 +108,6 @@ const SellerDashboard = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); 
   }, [messages]);
 
-  // Handle Smart Notification Badges Logic
   useEffect(() => {
     if (!sellerData.id) return;
 
@@ -187,7 +187,7 @@ const SellerDashboard = () => {
         alert('✅ Order Status Updated Successfully!');
         setEditingOrder(null);
         fetchOrders(sellerData.id); 
-        setSelectedOrder(null); // Optional: close detail view after update
+        setSelectedOrder(null); // Return to main table after update
       } else {
         alert('❌ Failed to update status.');
       }
@@ -295,7 +295,6 @@ const SellerDashboard = () => {
     }
   };
 
-  // Restricting Select All to maximum 120 products
   const handleSelectAllGlobalProducts = () => {
     if (selectedGlobalProducts.length > 0) {
       setSelectedGlobalProducts([]); 
@@ -338,11 +337,28 @@ const SellerDashboard = () => {
     } catch (error) { alert('Error updating shop'); }
   };
 
+  // Chat Fetch functions
   const fetchContacts = async (sellerId) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/chat/seller/${sellerId}/contacts`);
       if (res.ok) setChatContacts(await res.json());
     } catch (e) { console.error(e); }
+  };
+
+  // FEATURE: Fetch all registered customers to initiate chat
+  const fetchAllCustomers = async () => {
+    try {
+      // In a real app you might have a dedicated route for this, e.g., `/api/customers/all`
+      // For now, if that route doesn't exist yet, we will fallback gracefully.
+      const res = await fetch(`${API_BASE_URL}/api/customers/all`);
+      if (res.ok) {
+        const data = await res.json();
+        setAllCustomers(data);
+      }
+    } catch (e) { 
+      // Silently catch error if API doesn't exist yet, use chatContacts as fallback
+      console.log("Using existing contacts as fallback for all customers"); 
+    }
   };
 
   const fetchMessages = async (sellerId, custId) => {
@@ -663,108 +679,105 @@ const SellerDashboard = () => {
     </div>
   );
 
-  const renderChat = () => (
-    <div className="chat-container">
-      
-      {/* Sidebar: Contacts */}
-      <div className={`chat-sidebar ${activeChatCustomer ? 'hidden-mobile' : ''}`}>
-        <div className="chat-sidebar-header">
-           <MessageSquare size={18}/> Customers
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No customer inquiries yet.</div>}
-          {chatContacts.map(contact => (
-            <div key={contact.id} onClick={() => { setActiveChatCustomer(contact); fetchMessages(sellerData.id, contact.id); }} className={`chat-contact ${activeChatCustomer?.id === contact.id ? 'active' : ''}`}>
-              👤 {contact.fullName}
-            </div>
-          ))}
-        </div>
-      </div>
+  const renderChat = () => {
+    // If backend doesn't support 'allCustomers' yet, fall back to chatContacts
+    const displayContacts = allCustomers && allCustomers.length > 0 ? allCustomers : chatContacts;
 
-      {/* Main Chat Area */}
-      <div className={`chat-main ${!activeChatCustomer ? 'hidden-mobile' : ''}`}>
-        {activeChatCustomer ? (
-          <>
-            <div className="chat-header-blue">
-              <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                <button className="back-btn-mobile" onClick={() => setActiveChatCustomer(null)}><ArrowLeft size={18} color="white"/></button>
-                <span style={{ fontWeight: 'bold', fontSize: '16px', color: 'white' }}>Seller Support Chat</span>
-              </div>
-              <RefreshCw size={18} style={{ cursor: 'pointer', color: 'white' }} onClick={() => fetchMessages(sellerData.id, activeChatCustomer.id)}/>
-            </div>
-            
-            <div className="chat-messages">
-              {/* System Greeting */}
-              <div className="chat-message-row received" style={{marginTop: '10px', marginBottom: '20px'}}>
-                <div className="chat-bubble system-bubble">
-                   <p style={{margin: '0 0 10px 0'}}>Please note that your store is linked to your Gurentor account. Any positive or negative reviews received on your Weyfeir store will also be reflected on your Gurentor store.</p>
-                   <p style={{margin: 0}}>Thank you for being part of the Weyfeir community. We look forward to seeing your store grow and succeed</p>
-                </div>
-              </div>
-
-              {messages.length === 0 ? <div style={{textAlign: 'center', color: '#888', marginTop: '20px'}}>Send a message!</div> : 
-                messages.map(msg => (
-                  <div key={msg.id} className={`chat-message-row ${msg.sender === 'seller' ? 'sent' : 'received'}`}>
-                    
-                    {/* User Icon for Customer (Received - Left Side) */}
-                    {msg.sender !== 'seller' && (
-                      <div className="chat-avatar-icon">
-                        <User size={16} color="#555" />
-                      </div>
-                    )}
-                    
-                    <div style={{display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'seller' ? 'flex-end' : 'flex-start', maxWidth: '80%'}}>
-                       {msg.sender !== 'seller' && <span style={{fontSize: '11px', color: '#888', marginBottom: '3px', marginLeft: '5px'}}>{activeChatCustomer.email}</span>}
-                       <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
-                         
-                         {/* Fixed Line Break and Message Check */}
-                         {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
-                         
-                         {/* Secure Image Rendering */}
-                         {renderChatImage(msg.image_url) && (
-                           <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
-                             <img 
-                               src={renderChatImage(msg.image_url)} 
-                               alt="Shared File" 
-                               style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.4)', padding: '2px', objectFit: 'contain' }} 
-                               onError={(e) => { e.target.style.display = 'none'; }}
-                             />
-                           </a>
-                         )}
-                       </div>
-                    </div>
-
-                    {/* User Icon for Seller (Sent - Right Side) */}
-                    {msg.sender === 'seller' && (
-                      <div className="chat-avatar-icon">
-                        <User size={16} color="#555" />
-                      </div>
-                    )}
-                  </div>
-                ))
-              }
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="chat-input-area">
-              <input type="file" accept="image/*" ref={chatFileInputRef} onChange={(e) => setChatImageFile(e.target.files[0])} style={{ display: 'none' }} />
-              <button onClick={() => chatFileInputRef.current.click()} className={`upload-btn ${chatImageFile ? 'has-file' : ''}`}>
-                <ImageIcon size={24} />
-              </button>
-              {chatImageFile && <span className="file-name">{chatImageFile.name}</span>}
-              <input type="text" placeholder="Type a message..." value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="chat-input" />
-              <button onClick={handleSendMessage} className="send-btn" style={{backgroundColor: 'transparent', color: '#888'}}><Send size={24}/></button>
-            </div>
-          </>
-        ) : (
-          <div className="empty-chat-state">
-            <MessageSquare size={50} color="#ddd" />
-            <p>Select a customer inquiry to reply</p>
+    return (
+      <div className="chat-container">
+        <div className={`chat-sidebar ${activeChatCustomer ? 'hidden-mobile' : ''}`}>
+          <div className="chat-sidebar-header">
+             <MessageSquare size={18}/> Customers
           </div>
-        )}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {displayContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No customers available to chat.</div>}
+            {displayContacts.map(contact => (
+              <div key={contact.id} onClick={() => { setActiveChatCustomer(contact); fetchMessages(sellerData.id, contact.id); }} className={`chat-contact ${activeChatCustomer?.id === contact.id ? 'active' : ''}`}>
+                <User size={16} /> {contact.fullName}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`chat-main ${!activeChatCustomer ? 'hidden-mobile' : ''}`}>
+          {activeChatCustomer ? (
+            <>
+              <div className="chat-header-blue">
+                <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                  <button className="back-btn-mobile" onClick={() => setActiveChatCustomer(null)}><ArrowLeft size={18} color="white"/></button>
+                  <span style={{ fontWeight: 'bold', fontSize: '16px', color: 'white' }}>Seller Support Chat - {activeChatCustomer.fullName}</span>
+                </div>
+                <RefreshCw size={18} style={{ cursor: 'pointer', color: 'white' }} onClick={() => fetchMessages(sellerData.id, activeChatCustomer.id)}/>
+              </div>
+              
+              <div className="chat-messages">
+                <div className="chat-message-row received" style={{marginTop: '10px', marginBottom: '20px'}}>
+                  <div className="chat-bubble system-bubble">
+                     <p style={{margin: '0 0 10px 0'}}>Please note that your store is linked to your Gurentor account. Any positive or negative reviews received on your Weyfeir store will also be reflected on your Gurentor store.</p>
+                     <p style={{margin: 0}}>Thank you for being part of the Weyfeir community. We look forward to seeing your store grow and succeed</p>
+                  </div>
+                </div>
+
+                {messages.length === 0 ? <div style={{textAlign: 'center', color: '#888', marginTop: '20px'}}>Send a message!</div> : 
+                  messages.map(msg => (
+                    <div key={msg.id} className={`chat-message-row ${msg.sender === 'seller' ? 'sent' : 'received'}`}>
+                      
+                      {/* User Icon for Customer (Received - Left Side) */}
+                      {msg.sender !== 'seller' && (
+                        <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
+                      )}
+                      
+                      <div style={{display: 'flex', flexDirection: 'column', alignItems: msg.sender === 'seller' ? 'flex-end' : 'flex-start', maxWidth: '80%'}}>
+                         {msg.sender !== 'seller' && <span style={{fontSize: '11px', color: '#888', marginBottom: '3px', marginLeft: '5px'}}>{activeChatCustomer.fullName}</span>}
+                         <div className={`chat-bubble ${msg.sender === 'seller' ? 'sent-bubble' : 'received-bubble'}`}>
+                           
+                           {/* Fixed Line Break and Message Check */}
+                           {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
+                           
+                           {/* Secure Image Rendering */}
+                           {renderChatImage(msg.image_url) && (
+                             <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
+                               <img 
+                                 src={renderChatImage(msg.image_url)} 
+                                 alt="Shared File" 
+                                 style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.4)', padding: '2px', objectFit: 'contain' }} 
+                                 onError={(e) => { e.target.style.display = 'none'; }}
+                               />
+                             </a>
+                           )}
+                         </div>
+                      </div>
+
+                      {/* User Icon for Seller (Sent - Right Side) */}
+                      {msg.sender === 'seller' && (
+                        <div className="chat-avatar-icon"><User size={16} color="#555" /></div>
+                      )}
+                    </div>
+                  ))
+                }
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div className="chat-input-area">
+                <input type="file" accept="image/*" ref={chatFileInputRef} onChange={(e) => setChatImageFile(e.target.files[0])} style={{ display: 'none' }} />
+                <button onClick={() => chatFileInputRef.current.click()} className={`upload-btn ${chatImageFile ? 'has-file' : ''}`}>
+                  <ImageIcon size={24} />
+                </button>
+                {chatImageFile && <span className="file-name">{chatImageFile.name}</span>}
+                <input type="text" placeholder="Type a message..." value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="chat-input" />
+                <button onClick={handleSendMessage} className="send-btn" style={{backgroundColor: 'transparent', color: '#888'}}><Send size={24}/></button>
+              </div>
+            </>
+          ) : (
+            <div className="empty-chat-state">
+              <MessageSquare size={50} color="#ddd" />
+              <p>Select a customer to start chatting</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderOrdersTable = (title) => {
     const ordersToShow = title === 'Direct Orders' ? directOrders : allOrders;
@@ -801,7 +814,7 @@ const SellerDashboard = () => {
                 <p style={{ margin: '0 0 5px 0', fontSize: '13px', color: '#555' }}><strong>Address:</strong> {selectedOrder.shipping_address || 'N/A'}</p>
               </div>
 
-              {/* Status Edit button in the detailed view - always available if needed */}
+              {/* Status Edit button ONLY in detail view */}
               <button onClick={() => { setEditingOrder(selectedOrder); setNewOrderStatus(selectedOrder.status); }} style={{ width: '100%', backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
                 <Edit size={18}/> UPDATE STATUS
               </button>
@@ -901,7 +914,7 @@ const SellerDashboard = () => {
               <tbody>
                 {ordersToShow.map((o, i) => (
                   <tr key={i}>
-                    {/* Clickable Order ID to view details and edit */}
+                    {/* Clickable Order ID triggers the detail view */}
                     <td 
                       style={{ color: '#1e88e5', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }} 
                       onClick={() => setSelectedOrder(o)}
@@ -922,8 +935,8 @@ const SellerDashboard = () => {
                       </span>
                     </td>
                     <td style={{ color: '#1e88e5', textAlign: 'center' }}>
-                      {/* Removed Edit Button from here as requested */}
                       <Eye size={18} style={{ cursor: 'pointer' }} onClick={() => setSelectedOrder(o)} title="View Details" />
+                      {/* Edit Button is Removed from Actions Column */}
                     </td>
                   </tr>
                 ))}
@@ -1216,7 +1229,7 @@ const SellerDashboard = () => {
           
           /* Modals */
           .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; width: 100%; }
+          .modal-content { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
           .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
           .modal-input.no-margin { margin-bottom: 0; }
           .modal-textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; box-sizing: border-box; outline: none; min-height: 80px; resize: vertical; }
