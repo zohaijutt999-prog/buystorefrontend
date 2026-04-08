@@ -59,7 +59,7 @@ const SellerDashboard = () => {
   const [newProduct, setNewProduct] = useState({ title: '', category: '', price: '', stock_qty: '', description: '' });
   const [productImageFile, setProductImageFile] = useState(null);
 
-  // Notification States Fixed Here
+  // Notification States
   const [newOrdersBadge, setNewOrdersBadge] = useState(0);
   const [newChatBadge, setNewChatBadge] = useState(0);
 
@@ -187,6 +187,7 @@ const SellerDashboard = () => {
         alert('✅ Order Status Updated Successfully!');
         setEditingOrder(null);
         fetchOrders(sellerData.id); 
+        setSelectedOrder(null); // Optional: close detail view after update
       } else {
         alert('❌ Failed to update status.');
       }
@@ -294,7 +295,7 @@ const SellerDashboard = () => {
     }
   };
 
-  // Restricting Select All to maximum 120 products to prevent database overload
+  // Restricting Select All to maximum 120 products
   const handleSelectAllGlobalProducts = () => {
     if (selectedGlobalProducts.length > 0) {
       setSelectedGlobalProducts([]); 
@@ -552,7 +553,7 @@ const SellerDashboard = () => {
 
       {showAddProductModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ width: productAddMode === 'browse' ? '90%' : '500px', maxWidth: '1000px' }}>
+          <div className="modal-content" style={{ width: '90%', maxWidth: '1000px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, color: '#333' }}>Select Products to Add</h3>
               <X size={20} style={{ cursor: 'pointer', color: '#888' }} onClick={() => setShowAddProductModal(false)} />
@@ -665,6 +666,7 @@ const SellerDashboard = () => {
   const renderChat = () => (
     <div className="chat-container">
       
+      {/* Sidebar: Contacts */}
       <div className={`chat-sidebar ${activeChatCustomer ? 'hidden-mobile' : ''}`}>
         <div className="chat-sidebar-header">
            <MessageSquare size={18}/> Customers
@@ -673,12 +675,13 @@ const SellerDashboard = () => {
           {chatContacts.length === 0 && <div style={{padding: '20px', color: '#888', fontSize: '13px'}}>No customer inquiries yet.</div>}
           {chatContacts.map(contact => (
             <div key={contact.id} onClick={() => { setActiveChatCustomer(contact); fetchMessages(sellerData.id, contact.id); }} className={`chat-contact ${activeChatCustomer?.id === contact.id ? 'active' : ''}`}>
-              <User size={16} /> {contact.fullName}
+              👤 {contact.fullName}
             </div>
           ))}
         </div>
       </div>
 
+      {/* Main Chat Area */}
       <div className={`chat-main ${!activeChatCustomer ? 'hidden-mobile' : ''}`}>
         {activeChatCustomer ? (
           <>
@@ -691,6 +694,7 @@ const SellerDashboard = () => {
             </div>
             
             <div className="chat-messages">
+              {/* System Greeting */}
               <div className="chat-message-row received" style={{marginTop: '10px', marginBottom: '20px'}}>
                 <div className="chat-bubble system-bubble">
                    <p style={{margin: '0 0 10px 0'}}>Please note that your store is linked to your Gurentor account. Any positive or negative reviews received on your Weyfeir store will also be reflected on your Gurentor store.</p>
@@ -716,7 +720,7 @@ const SellerDashboard = () => {
                          {/* Fixed Line Break and Message Check */}
                          {msg.message && msg.message !== 'null' && <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>}
                          
-                         {/* Fixed Blank Image check */}
+                         {/* Secure Image Rendering */}
                          {renderChatImage(msg.image_url) && (
                            <a href={renderChatImage(msg.image_url)} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: (msg.message && msg.message !== 'null') ? '10px' : '0' }}>
                              <img 
@@ -797,7 +801,7 @@ const SellerDashboard = () => {
                 <p style={{ margin: '0 0 5px 0', fontSize: '13px', color: '#555' }}><strong>Address:</strong> {selectedOrder.shipping_address || 'N/A'}</p>
               </div>
 
-              {/* Allow edit on ANY order */}
+              {/* Status Edit button in the detailed view - always available if needed */}
               <button onClick={() => { setEditingOrder(selectedOrder); setNewOrderStatus(selectedOrder.status); }} style={{ width: '100%', backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
                 <Edit size={18}/> UPDATE STATUS
               </button>
@@ -897,7 +901,13 @@ const SellerDashboard = () => {
               <tbody>
                 {ordersToShow.map((o, i) => (
                   <tr key={i}>
-                    <td style={{ color: '#333' }}>{o.order_number}</td>
+                    {/* Clickable Order ID to view details and edit */}
+                    <td 
+                      style={{ color: '#1e88e5', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }} 
+                      onClick={() => setSelectedOrder(o)}
+                    >
+                      {o.order_number}
+                    </td>
                     <td style={{ color: '#333' }}>{new Date(o.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}</td>
                     <td style={{ color: '#555' }}>${parseFloat(o.price).toFixed(2)}</td>
                     <td style={{ color: '#4caf50' }}>${(parseFloat(o.price) * 0.20).toFixed(2)}</td>
@@ -912,8 +922,8 @@ const SellerDashboard = () => {
                       </span>
                     </td>
                     <td style={{ color: '#1e88e5', textAlign: 'center' }}>
-                      <Eye size={18} style={{ cursor: 'pointer', marginRight: '10px' }} onClick={() => setSelectedOrder(o)} title="View Details" />
-                      <Edit size={18} style={{ cursor: 'pointer' }} onClick={() => { setEditingOrder(o); setNewOrderStatus(o.status); }} title="Edit Status" />
+                      {/* Removed Edit Button from here as requested */}
+                      <Eye size={18} style={{ cursor: 'pointer' }} onClick={() => setSelectedOrder(o)} title="View Details" />
                     </td>
                   </tr>
                 ))}
