@@ -7,8 +7,8 @@ const CustomerLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Use environment variable for the API base URL, fallback to localhost for local testing
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  // Use environment variable for the API base URL, fallback to live API URL
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.buystore.io';
 
   const handleLogin = async (e) => {
     e.preventDefault();

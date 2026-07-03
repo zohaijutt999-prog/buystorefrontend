@@ -13,7 +13,7 @@ const SellerDashboard = () => {
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.buystore.io';
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingShop, setIsEditingShop] = useState(false);
@@ -799,11 +799,6 @@ const SellerDashboard = () => {
                 <p style={{ margin: '0 0 5px 0', fontSize: '13px', color: '#555' }}><strong>Phone:</strong> {selectedOrder.shipping_phone || 'N/A'}</p>
                 <p style={{ margin: '0 0 5px 0', fontSize: '13px', color: '#555' }}><strong>Address:</strong> {selectedOrder.shipping_address || 'N/A'}</p>
               </div>
-
-              {/* Status Edit button ONLY in detail view */}
-              <button onClick={() => { setEditingOrder(selectedOrder); setNewOrderStatus(selectedOrder.status); }} style={{ width: '100%', backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                <Edit size={18}/> UPDATE STATUS
-              </button>
             </div>
 
             <div className="order-items-main">
@@ -858,28 +853,6 @@ const SellerDashboard = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '24px', color: '#333', margin: 0 }}>{title}</h2>
         </div>
-
-        {editingOrder && (
-          <div className="modal-overlay">
-            <div className="modal-content" style={{width: '400px'}}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: 0, color: '#333' }}>Update Order Status</h3>
-                <X size={20} style={{ cursor: 'pointer', color: '#888' }} onClick={() => setEditingOrder(null)} />
-              </div>
-              <p style={{fontSize: '13px', color: '#555', marginBottom: '15px'}}>Order ID: <strong>{editingOrder.order_number}</strong></p>
-              
-              <select value={newOrderStatus} onChange={(e) => setNewOrderStatus(e.target.value)} style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '20px', outline: 'none', backgroundColor: 'white', color: '#333', fontSize: '14px' }}>
-                <option value="Pending">Pending / Unpicked</option>
-                <option value="Processing">Processing</option>
-                <option value="Shipped">Shipped / On the way</option>
-                <option value="Delivered">Delivered</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
-              
-              <button onClick={handleUpdateOrderStatus} style={{ backgroundColor: '#1e88e5', color: 'white', border: 'none', padding: '12px', width: '100%', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>UPDATE STATUS</button>
-            </div>
-          </div>
-        )}
 
         <div className="table-container">
           {ordersToShow.length === 0 ? (

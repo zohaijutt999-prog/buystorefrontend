@@ -10,7 +10,7 @@ const ProductDetails = () => {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [shippingDetails, setShippingDetails] = useState({ name: '', phone: '', address: '' });
   
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.buystore.io';
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/products/single/${id}`)

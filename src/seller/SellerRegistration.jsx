@@ -8,8 +8,8 @@ const SellerRegistration = () => {
   const [idImages, setIdImages] = useState({ front: null, back: null });
   const navigate = useNavigate();
 
-  // Use environment variable for the API base URL, fallback to localhost for local testing
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  // Use environment variable for the API base URL, fallback to live API URL
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.buystore.io';
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
   const handleFileChange = (e, side) => setIdImages({ ...idImages, [side]: e.target.files[0] });

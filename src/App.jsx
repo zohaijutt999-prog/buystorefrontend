@@ -14,6 +14,10 @@ import SellerLogin from './seller/SellerLogin';
 import SellerRegistration from './seller/SellerRegistration';
 import SellerDashboard from './seller/SellerDashboard';
 
+// Import Admin Auth & Dashboard
+import AdminLogin from './admin/AdminLogin';
+import AdminDashboard from './admin/AdminDashboard';
+
 // Import Global Components
 import Footer from './components/Footer';
 
@@ -39,6 +43,10 @@ function App() {
             {/* Dashboard Routes */}
             <Route path="/dashboard" element={<CustomerDashboard />} />
             <Route path="/seller-dashboard" element={<SellerDashboard />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
           </Routes>
         </div>
 
@@ -50,6 +58,8 @@ function App() {
         <Routes>
           <Route path="/dashboard" element={null} />
           <Route path="/seller-dashboard" element={null} />
+          <Route path="/admin-dashboard" element={null} />
+          <Route path="/admin-login" element={null} />
           <Route path="*" element={<Footer />} />
         </Routes>
         

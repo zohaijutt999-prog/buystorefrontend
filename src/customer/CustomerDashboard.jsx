@@ -12,7 +12,7 @@ const CustomerDashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const navigate = useNavigate();
   
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.buystore.io';
   
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [userData, setUserData] = useState({ id: null, fullName: 'Loading...', email: 'Loading...', phoneNumber: '', initial: '' });
