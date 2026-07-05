@@ -6,7 +6,7 @@ import { Trash2, CheckCircle, X, MapPin, Phone, User } from 'lucide-react';
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const navigate = useNavigate();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.buystore.io';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || 'https://backend.buystore.io';
 
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [shippingDetails, setShippingDetails] = useState({ name: '', phone: '', address: '' });

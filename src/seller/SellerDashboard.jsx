@@ -13,7 +13,7 @@ const SellerDashboard = () => {
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.buystore.io';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || 'https://backend.buystore.io';
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingShop, setIsEditingShop] = useState(false);

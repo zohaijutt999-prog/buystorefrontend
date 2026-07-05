@@ -15,7 +15,7 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'https://api.buystore.io'}/api/login/admin`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'https://backend.buystore.io'}/api/login/admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

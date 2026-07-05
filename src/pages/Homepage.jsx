@@ -33,7 +33,7 @@ const HomePage = () => {
   const [bestSellingProducts, setBestSellingProducts] = useState([]);
 
   // Use environment variable for the API base URL, fallback to live API URL
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.buystore.io';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || 'https://backend.buystore.io';
 
   // Helper function to shuffle array randomly
   const shuffleArray = (array) => {

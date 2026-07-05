@@ -15,7 +15,7 @@ const AdminDashboard = () => {
   const [orderSearchTerm, setOrderSearchTerm] = useState('');
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_BACKEND_URL || 'https://api.buystore.io';
+  const API_URL = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_BASE_URL || 'https://backend.buystore.io';
 
   useEffect(() => {
     const adminUser = localStorage.getItem('adminUser');
